@@ -103,7 +103,7 @@ a{color:var(--brand); text-decoration:none} a:hover{text-decoration:underline}
 .step{display:flex; flex-direction:column; gap:10px}
 .step h2{font-size:16px; font-weight:700; margin:0; display:flex; align-items:baseline; gap:10px}
 .stepnum{font-family:var(--font); color:var(--ink-3); font-size:12px; font-weight:600; letter-spacing:.08em; flex:none}
-.stepnum::after{content:" —"}
+.stepnum::after{content:""; display:inline-block; width:14px; height:1px; background:currentColor; margin-left:7px; vertical-align:middle}
 .hint{font-size:13px; color:var(--ink-3); margin:0}
 .point{display:flex; gap:10px; align-items:center; color:var(--ink-2); font-size:14px; color:var(--ink-2);
   background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:9px 12px}
@@ -272,12 +272,12 @@ dialog .close{float:right; margin-top:4px}
 
       <div class="results" id="results" aria-live="polite">
         <div class="resgrid">
-          <div class="tonal t-red"><div class="eyebrow">Stan zajebania</div><div class="big" id="rPromile">–</div><div class="sub" id="rStan">–</div></div>
-          <div class="tonal t-blue"><div class="eyebrow">Tryb</div><div class="big" id="rMode">–</div><div class="sub" id="rSpeed">–</div></div>
-          <div class="tonal t-yellow"><div class="eyebrow">Dystans do strefy</div><div class="big" id="rDist">–</div><div class="sub" id="rDir">–</div></div>
-          <div class="tonal t-green"><div class="eyebrow">Szacowany czas</div><div class="big" id="rTime">–</div><div class="sub" id="rEta">–</div></div>
+          <div class="tonal t-red"><div class="eyebrow">Stan zajebania</div><div class="big" id="rPromile">-</div><div class="sub" id="rStan">-</div></div>
+          <div class="tonal t-blue"><div class="eyebrow">Tryb</div><div class="big" id="rMode">-</div><div class="sub" id="rSpeed">-</div></div>
+          <div class="tonal t-yellow"><div class="eyebrow">Dystans do strefy</div><div class="big" id="rDist">-</div><div class="sub" id="rDir">-</div></div>
+          <div class="tonal t-green"><div class="eyebrow">Szacowany czas</div><div class="big" id="rTime">-</div><div class="sub" id="rEta">-</div></div>
         </div>
-        <div class="verdict"><div class="vi" id="rIcon">🌙</div><p id="rVerdict">–</p></div>
+        <div class="verdict"><div class="vi" id="rIcon">🌙</div><p id="rVerdict">-</p></div>
         <button class="navbtn" id="navBtn" hidden>🧭 Nawiguj do strefy wolności</button>
         <div class="navsteps" id="navBox" hidden></div>
       </div>
@@ -294,6 +294,7 @@ dialog .close{float:right; margin-top:4px}
 <dialog id="about">
   <button class="iconbtn close" id="btnClose" aria-label="Zamknij">×</button>
   <h2>ŻulMapa 1.0 „Czołg"</h2>
+  <p><a href="raport.html"><b>Raport Instytutu nr 7/2026: Czołganie weekendowe w Poznaniu i Lublinie →</b></a></p>
   <p><b>Instytut Danych z Dupy. Badamy to, co naprawdę istotne.</b> Projekt satyryczny - wyniki mają wartość naukową
   porównywalną z horoskopem, a „strefa wolności" nie istnieje: policja i tak Cię znajdzie, a trawnik nie jest hotelem.</p>
   <p>A na poważnie: po alkoholu nie prowadź żadnego pojazdu, pij wodę, wracaj z kimś i w ciepłe miejsce.
@@ -674,10 +675,10 @@ function runAnalysis(){
   document.getElementById("rSpeed").textContent = "prędkość: " + mv.kmh.toFixed(1).replace(".", ",") + " km/h";
 
   if (!spot){
-    document.getElementById("rDist").textContent = "–";
+    document.getElementById("rDist").textContent = "-";
     document.getElementById("rDir").textContent = "brak terenów zielonych w danych";
-    document.getElementById("rTime").textContent = "–";
-    document.getElementById("rEta").textContent = "–";
+    document.getElementById("rTime").textContent = "-";
+    document.getElementById("rEta").textContent = "-";
     document.getElementById("rIcon").textContent = "🤷";
     document.getElementById("rVerdict").innerHTML = "<b>Nie ma.</b> W promieniu 3 km OpenStreetMap nie zna żadnego parku ani krzaka. Zmień punkt startowy.";
   } else {
