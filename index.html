@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ŻulMapa</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='4' cy='25' r='2.4' fill='%23ea4335'/%3E%3Ccircle cx='10.5' cy='20' r='2.4' fill='%23f9ab00'/%3E%3Ccircle cx='17' cy='24' r='2.4' fill='%2334a853'/%3E%3Cg transform='translate(24 15) rotate(112)'%3E%3Cpath d='M0 -9.5 C-5.2 -9.5 -8.6 -6.1 -8.6 -1.4 C-8.6 3.4 0 11.5 0 11.5 C0 11.5 8.6 3.4 8.6 -1.4 C8.6 -6.1 5.2 -9.5 0 -9.5 Z' fill='%234285f4'/%3E%3Ccircle cx='0' cy='-1.8' r='3.1' fill='white'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<style>
+/* App shell w stylistyce produktów Google: pasek + panel + mapa na cały ekran */
+:root{
+  --bg:#ffffff; --surface:#f8f9fa; --line:#dadce0;
+  --ink:#202124; --ink-2:#3c4043; --ink-3:#5f6368;
+  --brand:#1a73e8; --brand-tonal:#e8f0fe; --onbrand:#ffffff;
+  --tint-blue:#e8f0fe; --tint-green:#e6f4ea; --tint-yellow:#fef7e0; --tint-red:#fce8e6;
+  --font:"Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  --shadow:0 1px 3px rgba(60,64,67,.15), 0 4px 8px rgba(60,64,67,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1b1c1e; --surface:#252629; --line:#45474b;
+    --ink:#e8eaed; --ink-2:#bdc1c6; --ink-3:#9aa0a6;
+    --brand:#8ab4f8; --brand-tonal:#1f3250; --onbrand:#1b1c1e;
+    --tint-blue:#1f3250; --tint-green:#1e3a29; --tint-yellow:#453a17; --tint-red:#46231f;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1b1c1e; --surface:#252629; --line:#45474b;
+  --ink:#e8eaed; --ink-2:#bdc1c6; --ink-3:#9aa0a6;
+  --brand:#8ab4f8; --brand-tonal:#1f3250; --onbrand:#1b1c1e;
+  --tint-blue:#1f3250; --tint-green:#1e3a29; --tint-yellow:#453a17; --tint-red:#46231f;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%; margin:0}
+body{background:var(--bg); color:var(--ink); font-family:var(--font); font-size:15px; line-height:1.45;
+  -webkit-font-smoothing:antialiased; overflow:hidden}
+button{font-family:inherit}
+a{color:var(--brand); text-decoration:none} a:hover{text-decoration:underline}
+:focus-visible{outline:3px solid var(--brand); outline-offset:2px; border-radius:4px}
+
+.app{height:100%; display:flex; flex-direction:column}
+
+/* Pasek aplikacji */
+.bar{height:56px; flex:none; display:flex; align-items:center; gap:14px; border-bottom:1px solid var(--line);
+  background:var(--bg);
+  padding-left:max(14px, env(safe-area-inset-left,0px)); padding-right:max(14px, env(safe-area-inset-right,0px));}
+.logo{display:flex; align-items:center; gap:8px; font-size:19px; font-weight:500; letter-spacing:-.2px; white-space:nowrap}
+.logo svg{display:block}
+.logo{font-weight:700}
+.logo .zul{color:var(--ink)} .logo .mapa{color:#4285f4}
+:root[data-theme="dark"] .logo .mapa{color:#8ab4f8}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .logo .mapa{color:#8ab4f8} }
+.seg{display:flex; border:1px solid var(--line); border-radius:9999px; overflow:hidden; height:38px; flex:none}
+.seg button{border:none; background:var(--bg); color:var(--ink-2); font-size:14px; font-weight:500; padding:0 18px; cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--brand-tonal); color:var(--brand)}
+.bar .spacer{flex:1}
+.iconbtn{width:38px; height:38px; flex:none; border-radius:50%; border:1px solid var(--line); background:var(--bg);
+  color:var(--ink-2); font-size:16px; font-weight:700; cursor:pointer}
+.net{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-3); flex:none; white-space:nowrap}
+.net .dot{width:9px; height:9px; border-radius:50%; background:#34a853; flex:none}
+.net.off .dot{background:#ea4335}
+/* Pasek postępu ładowania danych OSM */
+.progress{height:3px; flex:none; background:var(--surface); position:relative; overflow:hidden}
+.progress .fill{position:absolute; left:0; top:0; bottom:0; width:0%; background:var(--brand); transition:width .35s ease}
+.progress.err .fill{background:#ea4335}
+.progress.idle{visibility:hidden}
+
+/* Układ: panel + mapa */
+.main{flex:1; min-height:0; display:grid; grid-template-columns:380px 1fr; position:relative}
+.panel{min-height:0; overflow-y:auto; border-right:1px solid var(--line); background:var(--bg);
+  padding:16px max(16px, env(safe-area-inset-left,0px)) 24px 16px; display:flex; flex-direction:column; gap:18px}
+.handle{display:none}
+.mapwrap{position:relative; min-height:0}
+#map{height:100%; width:100%; background:var(--surface)}
+/* Telefon: mapa na cały ekran, panel jako wysuwany bottom sheet - mapę widać cały czas */
+@media (max-width:860px){
+  .main{display:block}
+  .mapwrap{position:absolute; inset:0}
+  .panel{position:absolute; left:0; right:0; bottom:0; z-index:700; max-height:56%;
+    border-right:none; border-top:1px solid var(--line); border-radius:16px 16px 0 0;
+    box-shadow:0 -2px 12px rgba(32,33,36,.25); gap:14px; padding-top:0;
+    padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px));
+    padding-bottom:max(20px, env(safe-area-inset-bottom,0px)); transition:max-height .25s ease}
+  .panel.min{max-height:62px; overflow:hidden}
+  .handle{display:flex; position:sticky; top:0; z-index:1; margin:0 -16px 2px; padding:8px 16px 10px;
+    background:var(--bg); border:none; border-radius:16px 16px 0 0; cursor:pointer; width:calc(100% + 32px);
+    flex-direction:column; align-items:center; gap:7px; color:var(--ink-2); font-size:13.5px; font-weight:500}
+  .handle::before{content:""; width:36px; height:4px; border-radius:2px; background:var(--line)}
+  .seg button{padding:0 14px}
+  .logo .word{display:none}
+  .net .lbl{display:none}
+}
+
+/* Panel - kroki */
+.step{display:flex; flex-direction:column; gap:10px}
+.step h2{font-size:16px; font-weight:500; margin:0; display:flex; align-items:center; gap:9px}
+.stepnum{width:24px; height:24px; border-radius:50%; background:var(--brand-tonal); color:var(--brand);
+  display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex:none}
+.hint{font-size:13px; color:var(--ink-3); margin:0}
+.point{display:flex; gap:8px; align-items:center; font-size:14px; color:var(--ink-2);
+  background:var(--surface); border-radius:8px; padding:9px 12px}
+.fieldrow{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.fieldrow label{font-size:13.5px; color:var(--ink-2)}
+input[type=number], select{height:40px; border:1px solid var(--line); border-radius:4px; background:var(--bg);
+  color:var(--ink); font-size:15px; padding:0 10px; font-family:inherit}
+input[type=number]{width:74px}
+.drink{display:grid; grid-template-columns:32px 1fr auto; align-items:center; gap:10px;
+  border:1px solid var(--line); border-radius:8px; padding:8px 10px}
+.drink .ico{font-size:21px; text-align:center}
+.drink .nm{font-size:14.5px; line-height:1.25} .drink .nm small{display:block; font-size:12px; color:var(--ink-3)}
+.stepper{display:flex; align-items:center; gap:6px}
+.stepper button{width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:var(--bg);
+  color:var(--brand); font-size:18px; line-height:1; cursor:pointer}
+.stepper .val{min-width:28px; text-align:center; font-weight:500; font-variant-numeric:tabular-nums}
+.go{height:48px; border:none; border-radius:9999px; background:var(--brand); color:var(--onbrand); font-size:15px;
+  font-weight:500; cursor:pointer; padding:0 22px}
+
+/* Wyniki w panelu */
+.results{display:none; flex-direction:column; gap:12px}
+.results.show{display:flex}
+.resgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.tonal{border-radius:8px; padding:14px 12px; display:flex; flex-direction:column; gap:3px}
+.tonal .eyebrow{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3)}
+.tonal .big{font-size:21px; font-weight:500; line-height:1.15; font-variant-numeric:tabular-nums}
+.tonal .sub{font-size:12.5px; color:var(--ink-2)}
+.t-blue{background:var(--tint-blue)} .t-green{background:var(--tint-green)}
+.t-yellow{background:var(--tint-yellow)} .t-red{background:var(--tint-red)}
+.verdict{border:1px solid var(--line); border-radius:8px; padding:12px 14px; display:flex; gap:10px; align-items:flex-start}
+.verdict .vi{font-size:20px; line-height:1.2}
+.verdict p{margin:0; font-size:14px; color:var(--ink-2)} .verdict b{color:var(--ink); font-weight:500}
+
+/* Nakładki na mapie */
+.mapstatus{position:absolute; z-index:600; background:var(--bg); border:1px solid var(--line);
+  border-radius:9999px; padding:7px 14px; font-size:13px; color:var(--ink-2); box-shadow:var(--shadow);
+  left:50%; transform:translateX(-50%); top:12px; max-width:min(92%,560px); text-align:center}
+.legend{position:absolute; z-index:600; right:max(12px, env(safe-area-inset-right,0px)); bottom:24px;
+  background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:12.5px;
+  color:var(--ink-2); box-shadow:var(--shadow); display:flex; flex-direction:column; gap:6px}
+.legend span{display:inline-flex; align-items:center; gap:7px}
+.dot{width:10px; height:10px; border-radius:50%; display:inline-block; flex:none}
+@media (max-width:860px){ .legend{display:none} }
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .leaflet-layer,
+  :root:not([data-theme="light"]) .leaflet-control-zoom,
+  :root:not([data-theme="light"]) .leaflet-control-attribution{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9)}
+}
+:root[data-theme="dark"] .leaflet-layer, :root[data-theme="dark"] .leaflet-control-zoom,
+:root[data-theme="dark"] .leaflet-control-attribution{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9)}
+.pinemoji{font-size:22px; line-height:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
+
+/* Okno „i" */
+dialog{border:none; border-radius:12px; background:var(--bg); color:var(--ink); max-width:520px; width:calc(100% - 32px);
+  padding:22px 22px 18px; box-shadow:var(--shadow); font-size:14px}
+dialog::backdrop{background:rgba(32,33,36,.5)}
+dialog h2{font-size:18px; font-weight:500; margin:0 0 10px}
+dialog p{margin:0 0 10px; color:var(--ink-2)}
+dialog .close{float:right; margin-top:4px}
+@media (prefers-reduced-motion: reduce){ *{animation:none!important; transition:none!important} }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="bar">
+    <div class="logo" aria-label="ŻulMapa - Instytut Danych z Dupy">
+      <svg width="34" height="26" viewBox="0 0 42 32" aria-hidden="true">
+        <circle cx="5" cy="25" r="2.6" fill="#ea4335"/>
+        <circle cx="13" cy="19.5" r="2.6" fill="#f9ab00"/>
+        <circle cx="21" cy="24" r="2.6" fill="#34a853"/>
+        <g transform="translate(32 15) rotate(112)">
+          <path d="M0 -10.5 C-5.8 -10.5 -9.5 -6.8 -9.5 -1.6 C-9.5 3.8 0 12.8 0 12.8 C0 12.8 9.5 3.8 9.5 -1.6 C9.5 -6.8 5.8 -10.5 0 -10.5 Z" fill="#4285f4"/>
+          <circle cx="0" cy="-2" r="3.4" fill="var(--bg)"/>
+        </g>
+      </svg>
+      <span class="word"><span class="zul">Żul</span><span class="mapa">Mapa</span></span>
+    </div>
+    <div class="seg" role="group" aria-label="Miasto">
+      <button id="btnPoznan" aria-pressed="true">Poznań</button>
+      <button id="btnLublin" aria-pressed="false">Lublin</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="net" id="net" role="status" aria-live="polite"><span class="dot"></span><span class="lbl" id="netLbl">online</span></div>
+    <button class="iconbtn" id="btnInfo" aria-label="Informacje o aplikacji">i</button>
+  </header>
+  <div class="progress idle" id="progress" role="progressbar" aria-label="Ładowanie danych OSM" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="fill" id="progressFill"></div></div>
+
+  <div class="main">
+    <aside class="panel" id="panel">
+      <button class="handle" id="handle" aria-expanded="true" aria-controls="panel">Dane wejściowe - dotknij, aby zwinąć/rozwinąć</button>
+      <div class="step">
+        <h2><span class="stepnum">1</span> Wybierz punkt w mieście</h2>
+        <div class="point">📍 <span id="pointLabel">Stary Rynek, Poznań</span></div>
+        <p class="hint">Kliknij na mapie miejsce, w którym pijesz.</p>
+      </div>
+
+      <div class="step">
+        <h2><span class="stepnum">2</span> Podaj ile już weszło</h2>
+        <div class="fieldrow">
+          <label for="weight">Waga (kg):</label>
+          <input type="number" id="weight" value="80" min="35" max="250" step="1">
+          <select id="sex" aria-label="Płeć do współczynnika Widmarka">
+            <option value="m" selected>Mężczyzna</option>
+            <option value="k">Kobieta</option>
+          </select>
+        </div>
+        <div class="fieldrow">
+          <label for="hours">Czas picia (godziny):</label>
+          <input type="number" id="hours" value="2" min="0" max="24" step="0.5">
+        </div>
+        <div class="drink"><div class="ico">🍺</div><div class="nm">Piwo<small>500 ml · 5%</small></div>
+          <div class="stepper"><button data-d="piwo" data-k="-1" aria-label="Mniej piwa">−</button><span class="val" id="v-piwo">0</span><button data-d="piwo" data-k="1" aria-label="Więcej piwa">+</button></div></div>
+        <div class="drink"><div class="ico">🥃</div><div class="nm">Wódka<small>kieliszek 50 ml · 40%</small></div>
+          <div class="stepper"><button data-d="wodka" data-k="-1" aria-label="Mniej wódki">−</button><span class="val" id="v-wodka">0</span><button data-d="wodka" data-k="1" aria-label="Więcej wódki">+</button></div></div>
+        <div class="drink"><div class="ico">🍷</div><div class="nm">Wino<small>lampka 200 ml · 12%</small></div>
+          <div class="stepper"><button data-d="wino" data-k="-1" aria-label="Mniej wina">−</button><span class="val" id="v-wino">0</span><button data-d="wino" data-k="1" aria-label="Więcej wina">+</button></div></div>
+        <div class="drink"><div class="ico">🧃</div><div class="nm">Pryt<small>500 ml · 18% · co tylko było</small></div>
+          <div class="stepper"><button data-d="pryt" data-k="-1" aria-label="Mniej prytu">−</button><span class="val" id="v-pryt">0</span><button data-d="pryt" data-k="1" aria-label="Więcej prytu">+</button></div></div>
+      </div>
+
+      <div class="step">
+        <h2><span class="stepnum">3</span> Twoja trasa czołgania</h2>
+        <button class="go" id="calc">Oblicz trasę czołgania →</button>
+      </div>
+
+      <div class="results" id="results" aria-live="polite">
+        <div class="resgrid">
+          <div class="tonal t-red"><div class="eyebrow">Stan zajebania</div><div class="big" id="rPromile">–</div><div class="sub" id="rStan">–</div></div>
+          <div class="tonal t-blue"><div class="eyebrow">Tryb</div><div class="big" id="rMode">–</div><div class="sub" id="rSpeed">–</div></div>
+          <div class="tonal t-yellow"><div class="eyebrow">Dystans do strefy</div><div class="big" id="rDist">–</div><div class="sub" id="rDir">–</div></div>
+          <div class="tonal t-green"><div class="eyebrow">Szacowany czas</div><div class="big" id="rTime">–</div><div class="sub" id="rEta">–</div></div>
+        </div>
+        <div class="verdict"><div class="vi" id="rIcon">🌙</div><p id="rVerdict">–</p></div>
+      </div>
+    </aside>
+
+    <div class="mapwrap">
+      <div id="map" role="application" aria-label="Mapa"></div>
+      <div class="mapstatus" id="status" role="status">Ładowanie danych z OpenStreetMap…</div>
+      <div class="legend">
+        <span><span class="dot" style="background:#ea4335"></span>Posterunek + zasięg dojazdu</span>
+        <span><span class="dot" style="background:#f9ab00"></span>Kamera monitoringu</span>
+        <span><span class="dot" style="background:#a142f4"></span>Izba wytrzeźwień (680 m)</span>
+        <span><span class="dot" style="background:#34a853"></span>Zieleń / krzaki / altanki</span>
+        <span><span class="dot" style="background:#4285f4"></span>Twój punkt i trasa</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<dialog id="about">
+  <button class="iconbtn close" id="btnClose" aria-label="Zamknij">×</button>
+  <h2>ŻulMapa 1.0 „Czołg"</h2>
+  <p><b>Instytut Danych z Dupy. Badamy to, co naprawdę istotne.</b> Projekt satyryczny - wyniki mają wartość naukową
+  porównywalną z horoskopem, a „strefa wolności" nie istnieje: policja i tak Cię znajdzie, a trawnik nie jest hotelem.</p>
+  <p>A na poważnie: po alkoholu nie prowadź żadnego pojazdu, pij wodę, wracaj z kimś i w ciepłe miejsce.
+  Sen na mrozie po alkoholu bywa śmiertelny. W zagrożeniu życia dzwoń pod numer 112.</p>
+  <p>Metodologia: wzór Widmarka, eliminacja 0,15 promila na godzinę, zasięg izby wytrzeźwień: 680 m (norma Instytutu),
+  zasięg dojazdu patrolu: 500-900 m rosnący z promilami.</p>
+  <p>Dane: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© autorzy OpenStreetMap</a> ·
+  <a href="https://overpass-api.de/" target="_blank" rel="noopener">Overpass API</a> (posterunki, kamery, zieleń) ·
+  <a href="https://nominatim.org/" target="_blank" rel="noopener">Nominatim</a> (geokodowanie izb).
+  Izby: Poznań - ul. Podolańska 46, Lublin - ul. Północna 3. Mapa podkładowa: kafle OSM.</p>
+</dialog>
+
+<script>
+"use strict";
+/* ===================== Dane i konfiguracja ===================== */
+const CITIES = {
+  poznan: {
+    name: "Poznań",
+    center: [52.40816, 16.93425],            // Stary Rynek
+    defaultLabel: "Stary Rynek, Poznań",
+    izby: [{
+      name: "Ośrodek dla Osób Nietrzeźwych (MONAR)",
+      addr: "ul. Podolańska 46, 60-626 Poznań",
+      q: "Podolańska 46, Poznań",
+      fallback: [52.43104, 16.89743]          // wartość przybliżona; doprecyzowanie: Nominatim
+    }]
+  },
+  lublin: {
+    name: "Lublin",
+    center: [51.25056, 22.56092],             // Plac Litewski
+    defaultLabel: "Plac Litewski, Lublin",
+    izby: [{
+      name: "Ośrodek Wczesnej Interwencji (izba wytrzeźwień, teren KMP)",
+      addr: "ul. Północna 3, 20-064 Lublin",
+      q: "Północna 3, Lublin",
+      fallback: [51.26350, 22.55290]          // wartość przybliżona; doprecyzowanie: Nominatim
+    }]
+  }
+};
+const DRINKS = { piwo:{ml:500,abv:0.05}, wodka:{ml:50,abv:0.40}, wino:{ml:200,abv:0.12}, pryt:{ml:500,abv:0.18} };
+const IZBA_RADIUS = 680;                      // metry - jak na ulotce
+const CAMERA_RADIUS = 80;                     // metry
+const FETCH_RADIUS = 3000;                    // metry wokół centrum miasta
+const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+
+const state = { city:"poznan", point:null, counts:{piwo:0,wodka:0,wino:0,pryt:0},
+  data:{police:[], cameras:[], green:[], izby:[]}, loaded:false, loadToken:0 };
+
+/* ===================== Logika (czyste funkcje, pokryte testami) ===================== */
+function promille(counts, weightKg, sex, hours){
+  let grams = 0;
+  for (const k in DRINKS) grams += (counts[k]||0) * DRINKS[k].ml * DRINKS[k].abv * 0.789;
+  const r = sex === "k" ? 0.55 : 0.68;
+  return Math.max(0, grams / (weightKg * r) - 0.15 * (hours||0));
+}
+function stanLabel(p){
+  if (p < 0.2)  return {label:"Trzeźwy. Podejrzanie trzeźwy.", icon:"🧐"};
+  if (p < 0.5)  return {label:"Po jednym. Stan wykroczeniowy dopiero przed Tobą.", icon:"🙂"};
+  if (p < 1.0)  return {label:"Stan wskazujący.", icon:"😏"};
+  if (p < 2.0)  return {label:"Faza gadania o życiu.", icon:"🗣️"};
+  if (p < 3.0)  return {label:"Żul operacyjny. Czołganie zalecane.", icon:"🫡"};
+  if (p < 4.0)  return {label:"Czołganie obowiązkowe.", icon:"🐛"};
+  return {label:"Wynik laboratoryjny. To już nie jest śmieszne - zadzwoń po pomoc.", icon:"🚑"};
+}
+function moveMode(p){
+  if (p < 2.0) return {mode:"Pieszo", icon:"🚶", kmh: Math.max(1.5, 4.0 * (1 - p * 0.15))};
+  return {mode:"Czołgiem", icon:"🐢", kmh: Math.max(0.3, 1.0 - (p - 2.0) * 0.2)};
+}
+function policeRadius(p){ return Math.round(500 + Math.min(4, p) * 100); } // m, rośnie z promilami
+function haversine(a, b){
+  const R = 6371000, toR = Math.PI/180;
+  const dLat = (b[0]-a[0])*toR, dLon = (b[1]-a[1])*toR;
+  const s = Math.sin(dLat/2)**2 + Math.cos(a[0]*toR)*Math.cos(b[0]*toR)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+function bearingName(a, b){
+  const toR = Math.PI/180;
+  const y = Math.sin((b[1]-a[1])*toR)*Math.cos(b[0]*toR);
+  const x = Math.cos(a[0]*toR)*Math.sin(b[0]*toR) - Math.sin(a[0]*toR)*Math.cos(b[0]*toR)*Math.cos((b[1]-a[1])*toR);
+  const deg = (Math.atan2(y,x)*180/Math.PI + 360) % 360;
+  return ["północ","północny wschód","wschód","południowy wschód","południe","południowy zachód","zachód","północny zachód"][Math.round(deg/45) % 8];
+}
+function dangerMargin(pt, data, pRadius){
+  let m = Infinity;
+  for (const z of data.izby)    m = Math.min(m, haversine(pt, z.pos) - IZBA_RADIUS);
+  for (const z of data.police)  m = Math.min(m, haversine(pt, z.pos) - pRadius);
+  for (const z of data.cameras) m = Math.min(m, haversine(pt, z.pos) - CAMERA_RADIUS);
+  return m; // >0: poza wszystkimi strefami
+}
+function pickSpot(user, data, pRadius){
+  if (!data.green.length) return null;
+  const scored = data.green.map(g => ({ g, margin: dangerMargin(g.pos, data, pRadius), dist: haversine(user, g.pos) }));
+  const safe = scored.filter(s => s.margin > 0).sort((a,b) => a.dist - b.dist);
+  if (safe.length) return {...safe[0], safe:true};
+  scored.sort((a,b) => b.margin - a.margin);    // najmniejsza gęstość interwencji
+  return {...scored[0], safe:false};
+}
+
+/* ===================== Mapa ===================== */
+const HAS_L = typeof L !== "undefined";
+let map = null, baseMarkers = null, routeLayer = null, userMarker = null;
+function initMap(){
+  if (!HAS_L){ setStatus("Nie udało się wczytać biblioteki mapy (Leaflet, CDN unpkg). Sprawdź połączenie z internetem i odśwież stronę."); return; }
+  baseMarkers = L.layerGroup(); routeLayer = L.layerGroup();
+  map = L.map("map", {zoomControl:false}).setView(CITIES[state.city].center, 14);
+  L.control.zoom({position:"topright"}).addTo(map);
+  const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">autorzy OpenStreetMap</a>'
+  }).addTo(map);
+  let tileWarned = false;
+  tiles.on("tileerror", () => { if (!tileWarned){ tileWarned = true;
+    setStatus("Kafle mapy OSM nie dochodzą - sprawdź połączenie z siecią."); } });
+  tiles.on("load", () => { tileWarned = false; });
+  baseMarkers.addTo(map); routeLayer.addTo(map);
+  map.on("click", e => setPoint([e.latlng.lat, e.latlng.lng], "Wybrany punkt (" + e.latlng.lat.toFixed(4) + ", " + e.latlng.lng.toFixed(4) + ")"));
+}
+function emojiIcon(ch){ return L.divIcon({className:"", html:'<div class="pinemoji">'+ch+"</div>", iconSize:[24,24], iconAnchor:[12,12]}); }
+function setPoint(pos, label){
+  state.point = pos;
+  document.getElementById("pointLabel").textContent = label;
+  if (!map) return;
+  if (userMarker) userMarker.setLatLng(pos);
+  else userMarker = L.marker(pos, {icon: emojiIcon("🍺"), title:"Twój punkt"}).addTo(map);
+}
+
+/* ===================== Pobieranie danych ===================== */
+function setStatus(t){ document.getElementById("status").textContent = t; }
+function setProgress(pct, err){
+  const box = document.getElementById("progress"), fill = document.getElementById("progressFill");
+  if (pct === null){ box.classList.add("idle"); box.classList.remove("err"); fill.style.width = "0%"; box.setAttribute("aria-valuenow","0"); return; }
+  box.classList.remove("idle"); box.classList.toggle("err", !!err);
+  fill.style.width = pct + "%"; box.setAttribute("aria-valuenow", String(pct));
+}
+function setNet(online){
+  const n = document.getElementById("net");
+  n.classList.toggle("off", !online);
+  document.getElementById("netLbl").textContent = online ? "online" : "offline";
+  n.title = online ? "Sieć: online" : "Sieć: offline";
+  if (!online) setStatus("Brak połączenia z siecią - mapa i dane OSM nie będą działać.");
+}
+async function overpass(query){
+  let lastErr;
+  for (const url of OVERPASS){
+    try{
+      const res = await fetch(url, {method:"POST", body:"data=" + encodeURIComponent(query),
+        headers:{"Content-Type":"application/x-www-form-urlencoded"}});
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return await res.json();
+    } catch(e){ lastErr = e; }
+  }
+  throw lastErr;
+}
+async function geocodeIzby(city){
+  const out = [];
+  for (const iz of CITIES[city].izby){
+    let pos = iz.fallback;
+    try{
+      const r = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=pl&q=" + encodeURIComponent(iz.q),
+        {headers:{"Accept":"application/json"}});
+      if (r.ok){ const j = await r.json(); if (j[0]) pos = [parseFloat(j[0].lat), parseFloat(j[0].lon)]; }
+    } catch(e){ /* zostaje wartość przybliżona */ }
+    out.push({name:iz.name, addr:iz.addr, pos});
+  }
+  return out;
+}
+async function loadCityData(){
+  const token = ++state.loadToken;             // ochrona przed wyścigiem przy przełączaniu miast
+  state.loaded = false;
+  const cityName = CITIES[state.city].name;
+  setProgress(8);
+  setStatus("Etap 1/3 - łączenie z Overpass API (" + cityName + ")…");
+  const [lat, lon] = CITIES[state.city].center;
+  const q = `[out:json][timeout:30];
+(
+  nwr["amenity"="police"](around:${FETCH_RADIUS},${lat},${lon});
+  node["man_made"="surveillance"](around:${FETCH_RADIUS},${lat},${lon});
+  way["leisure"~"^(park|garden)$"](around:${FETCH_RADIUS},${lat},${lon});
+  way["natural"~"^(scrub|wood)$"](around:${FETCH_RADIUS},${lat},${lon});
+  way["landuse"~"^(forest|meadow|grass|village_green|cemetery|allotments)$"](around:${FETCH_RADIUS},${lat},${lon});
+  node["amenity"="shelter"](around:${FETCH_RADIUS},${lat},${lon});
+);
+out tags center;`;
+  try{
+    const osm = await overpass(q);             // etap 1: posterunki, kamery, zieleń
+    if (token !== state.loadToken) return;     // w międzyczasie przełączono miasto
+    setProgress(65);
+    setStatus("Etap 2/3 - geokodowanie izb wytrzeźwień (Nominatim)…");
+    const izby = await geocodeIzby(state.city);
+    if (token !== state.loadToken) return;
+    setProgress(88);
+    setStatus("Etap 3/3 - rysowanie warstw…");
+    const police = [], cameras = [], green = [];
+    for (const el of osm.elements || []){
+      const pos = el.type === "node" ? [el.lat, el.lon] : (el.center ? [el.center.lat, el.center.lon] : null);
+      if (!pos) continue;
+      const t = el.tags || {};
+      if (t.amenity === "police") police.push({pos, name: t.name || "Posterunek"});
+      else if (t.man_made === "surveillance") cameras.push({pos});
+      else green.push({pos, name: t.name || (t.amenity === "shelter" ? "Altanka" :
+        t.natural === "scrub" ? "Krzaki" : t.landuse === "cemetery" ? "Cmentarz (cisza gwarantowana)" :
+        t.landuse === "allotments" ? "Ogródki działkowe" : "Teren zielony")});
+    }
+    state.data = {police, cameras, green, izby};
+    state.loaded = true;
+    if (map) drawBase();
+    setProgress(100);
+    setStatus(cityName + " - posterunki: " + police.length + ", kamery: " + cameras.length +
+      ", tereny zielone: " + green.length + ", izby wytrzeźwień: " + izby.length + ".");
+    setTimeout(() => { if (token === state.loadToken) setProgress(null); }, 900);
+  } catch(e){
+    if (token !== state.loadToken) return;
+    state.data = {police:[], cameras:[], green:[], izby:[]};
+    setProgress(100, true);
+    setStatus("Nie udało się pobrać danych z OpenStreetMap (Overpass). Sprawdź połączenie i odśwież - bez danych nie liczymy, Instytut nie zgaduje.");
+  }
+}
+function drawBase(){
+  baseMarkers.clearLayers();
+  for (const p of state.data.police) L.marker(p.pos, {icon: emojiIcon("🚓"), title:p.name}).bindPopup("👮 " + p.name).addTo(baseMarkers);
+  for (const cm of state.data.cameras) L.circleMarker(cm.pos, {radius:3, color:"#f9ab00", fillColor:"#f9ab00", fillOpacity:.9, weight:1}).addTo(baseMarkers);
+  for (const iz of state.data.izby) L.marker(iz.pos, {icon: emojiIcon("🏚️"), title:iz.name}).bindPopup("🛏️ <b>" + iz.name + "</b><br>" + iz.addr).addTo(baseMarkers);
+}
+
+/* ===================== Analiza i prezentacja ===================== */
+function fmtDist(m){ return m >= 1000 ? (m/1000).toFixed(1).replace(".", ",") + " km" : Math.round(m) + " m"; }
+function fmtTime(min){
+  if (min < 60) return Math.max(1, Math.round(min)) + " min";
+  const h = Math.floor(min/60), m = Math.round(min % 60);
+  return h + " h " + m + " min";
+}
+function runAnalysis(){
+  if (!map){ setStatus("Mapa nie działa bez biblioteki Leaflet - sprawdź połączenie i odśwież stronę."); return; }
+  if (!state.loaded){ setStatus("Dane jeszcze się ładują albo nie dojechały - spróbuj za chwilę."); return; }
+  const weight = Math.min(250, Math.max(35, parseFloat(document.getElementById("weight").value) || 80));
+  const sex = document.getElementById("sex").value;
+  const hours = Math.max(0, parseFloat(document.getElementById("hours").value) || 0);
+  const p = promille(state.counts, weight, sex, hours);
+  const stan = stanLabel(p);
+  const mv = moveMode(p);
+  const pRad = policeRadius(p);
+
+  routeLayer.clearLayers();
+  for (const z of state.data.police)  L.circle(z.pos, {radius:pRad, color:"#ea4335", weight:1, fillColor:"#ea4335", fillOpacity:.10}).addTo(routeLayer);
+  for (const z of state.data.izby)    L.circle(z.pos, {radius:IZBA_RADIUS, color:"#a142f4", weight:1.5, dashArray:"6 6", fillColor:"#a142f4", fillOpacity:.10}).addTo(routeLayer);
+  for (const z of state.data.cameras) L.circle(z.pos, {radius:CAMERA_RADIUS, color:"#f9ab00", weight:1, fillColor:"#f9ab00", fillOpacity:.12}).addTo(routeLayer);
+
+  const user = state.point;
+  const spot = pickSpot(user, state.data, pRad);
+  document.getElementById("rPromile").textContent = p.toFixed(2).replace(".", ",") + " ‰";
+  document.getElementById("rStan").textContent = stan.label;
+  document.getElementById("rMode").textContent = mv.icon + " " + mv.mode;
+  document.getElementById("rSpeed").textContent = "prędkość: " + mv.kmh.toFixed(1).replace(".", ",") + " km/h";
+
+  if (!spot){
+    document.getElementById("rDist").textContent = "–";
+    document.getElementById("rDir").textContent = "brak terenów zielonych w danych";
+    document.getElementById("rTime").textContent = "–";
+    document.getElementById("rEta").textContent = "–";
+    document.getElementById("rIcon").textContent = "🤷";
+    document.getElementById("rVerdict").innerHTML = "<b>Nie ma.</b> W promieniu 3 km OpenStreetMap nie zna żadnego parku ani krzaka. Zmień punkt startowy.";
+  } else {
+    const dist = spot.dist;
+    const timeMin = (dist/1000) / mv.kmh * 60;
+    document.getElementById("rDist").textContent = fmtDist(dist);
+    document.getElementById("rDir").textContent = "kieruj się na: " + bearingName(user, spot.g.pos);
+    document.getElementById("rTime").textContent = fmtTime(timeMin);
+    document.getElementById("rEta").textContent = mv.mode === "Czołgiem" ? "czołgania" : "marszu (kontrolowanego)";
+    L.polyline([user, spot.g.pos], {color:"#4285f4", weight:4, dashArray:"8 8"}).addTo(routeLayer);
+    const mk = L.marker(spot.g.pos, {icon: emojiIcon(spot.safe ? "🏕️" : "🌿")}).addTo(routeLayer);
+    if (spot.safe){
+      mk.bindPopup("✅ <b>Strefa wolności: " + spot.g.name + "</b><br>Jesteś poza zasięgiem posterunków (dojazd: " + pRad + " m), kamer i izby (680 m).").openPopup();
+      document.getElementById("rIcon").textContent = "🏕️";
+      document.getElementById("rVerdict").innerHTML = "<b>Strefa wolności: " + spot.g.name + ".</b> Margines od najbliższej strefy zagrożenia: " +
+        fmtDist(spot.margin) + ". Dłuższa trasa, spokojniejszy sen." + (p >= 2 ? " Lepiej kieruj się nisko przy gruncie." : "");
+    } else {
+      mk.bindPopup("🌿 <b>" + spot.g.name + "</b><br>Najniższa gęstość interwencji w zasięgu danych. Śpij czujnie.").openPopup();
+      document.getElementById("rIcon").textContent = "🌙";
+      document.getElementById("rVerdict").innerHTML = "<b>Pełnej strefy wolności brak</b> - każdy teren zielony w promieniu 3 km leży w czyimś zasięgu. " +
+        "Miejsce o najmniejszej gęstości interwencji: <b>" + spot.g.name + "</b> (niedobór marginesu: " + fmtDist(Math.abs(spot.margin)) + "). Krzaki, park, odludzie - i cicho.";
+    }
+    const sheet = isSheet();
+    const panelH = sheet ? document.getElementById("panel").getBoundingClientRect().height : 0;
+    map.fitBounds(L.latLngBounds([user, spot.g.pos]).pad(0.25),
+      {paddingTopLeft:[10, 48], paddingBottomRight:[10, 10 + panelH]});   // trasa widoczna nad bottom sheetem
+  }
+  document.getElementById("results").classList.add("show");
+  document.getElementById("results").scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+function isSheet(){ return window.matchMedia("(max-width:860px)").matches; }
+function setSheet(min){
+  if (!isSheet()) return;
+  const p = document.getElementById("panel");
+  p.classList.toggle("min", min);
+  document.getElementById("handle").setAttribute("aria-expanded", String(!min));
+}
+
+/* ===================== UI ===================== */
+function switchCity(city){
+  if (state.city === city) return;
+  state.city = city;
+  document.getElementById("btnPoznan").setAttribute("aria-pressed", String(city === "poznan"));
+  document.getElementById("btnLublin").setAttribute("aria-pressed", String(city === "lublin"));
+  const c = CITIES[city];
+  if (map){ routeLayer.clearLayers(); baseMarkers.clearLayers(); map.setView(c.center, 14); }
+  document.getElementById("results").classList.remove("show");
+  setPoint(c.center, c.defaultLabel);
+  loadCityData();
+}
+document.addEventListener("DOMContentLoaded", () => {
+  initMap();
+  setPoint(CITIES.poznan.center, CITIES.poznan.defaultLabel);
+  loadCityData();
+  document.getElementById("btnPoznan").addEventListener("click", () => switchCity("poznan"));
+  document.getElementById("btnLublin").addEventListener("click", () => switchCity("lublin"));
+  document.querySelectorAll(".stepper button").forEach(b => b.addEventListener("click", () => {
+    const d = b.dataset.d, k = parseInt(b.dataset.k, 10);
+    state.counts[d] = Math.max(0, Math.min(30, (state.counts[d]||0) + k));
+    document.getElementById("v-" + d).textContent = state.counts[d];
+  }));
+  document.getElementById("calc").addEventListener("click", runAnalysis);
+  document.getElementById("handle").addEventListener("click", () => setSheet(!document.getElementById("panel").classList.contains("min")));
+  map && map.on("click", () => setSheet(true));          // dotknięcie mapy zwija panel - widać cały obraz
+  setNet(navigator.onLine !== false);
+  window.addEventListener("online",  () => { setNet(true); if (!state.loaded) loadCityData(); });
+  window.addEventListener("offline", () => setNet(false));
+  const dlg = document.getElementById("about");
+  document.getElementById("btnInfo").addEventListener("click", () => dlg.showModal());
+  document.getElementById("btnClose").addEventListener("click", () => dlg.close());
+});
+</script>
+</body>
+</html>
