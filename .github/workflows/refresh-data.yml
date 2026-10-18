@@ -31,7 +31,7 @@ jobs:
           cp -r data "$RUNNER_TEMP/newdata"
           for i in 1 2 3; do
             git fetch -q origin main
-            git checkout -q -B main origin/main
+            git checkout -q -f -B main origin/main
             rm -rf data && cp -r "$RUNNER_TEMP/newdata" data
             git add data
             if git diff --cached --quiet; then echo "Bez zmian w danych"; exit 0; fi
