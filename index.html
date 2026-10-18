@@ -298,7 +298,11 @@ const DRINKS = { piwo:{ml:500,abv:0.05}, wodka:{ml:50,abv:0.40}, wino:{ml:200,ab
 const IZBA_RADIUS = 680;                      // metry - jak na ulotce
 const CAMERA_RADIUS = 80;                     // metry
 const FETCH_RADIUS = 3000;                    // metry wokół centrum miasta
-const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+const OVERPASS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter"
+];
 
 const state = { city:"poznan", point:null, counts:{piwo:0,wodka:0,wino:0,pryt:0},
   data:{police:[], cameras:[], green:[], izby:[]}, loaded:false, loadToken:0 };
@@ -398,12 +402,15 @@ function setNet(online){
 async function overpass(query){
   let lastErr;
   for (const url of OVERPASS){
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 40000);   // limit czasu: 40 s na mirror (wolne łącza)
     try{
       const res = await fetch(url, {method:"POST", body:"data=" + encodeURIComponent(query),
-        headers:{"Content-Type":"application/x-www-form-urlencoded"}});
-      if (!res.ok) throw new Error("HTTP " + res.status);
+        headers:{"Content-Type":"application/x-www-form-urlencoded"}, signal: ctrl.signal});
+      clearTimeout(t);
+      if (!res.ok) throw new Error("HTTP " + res.status + " (" + new URL(url).hostname + ")");
       return await res.json();
-    } catch(e){ lastErr = e; }
+    } catch(e){ clearTimeout(t); lastErr = e; }
   }
   throw lastErr;
 }
@@ -420,55 +427,55 @@ async function geocodeIzby(city){
   }
   return out;
 }
+function parseElements(osm, into){
+  for (const el of osm.elements || []){
+    const pos = el.type === "node" ? [el.lat, el.lon] : (el.center ? [el.center.lat, el.center.lon] : null);
+    if (!pos || pos[0] == null) continue;
+    const t = el.tags || {};
+    if (t.amenity === "police") into.police.push({pos, name: t.name || "Posterunek"});
+    else if (t.man_made === "surveillance") into.cameras.push({pos});
+    else into.green.push({pos, name: t.name || (t.amenity === "shelter" ? "Altanka" :
+      t.natural === "scrub" ? "Krzaki" : t.landuse === "cemetery" ? "Cmentarz (cisza gwarantowana)" :
+      t.landuse === "allotments" ? "Ogródki działkowe" : "Teren zielony")});
+  }
+}
 async function loadCityData(){
   const token = ++state.loadToken;             // ochrona przed wyścigiem przy przełączaniu miast
-  state.loaded = false;
+  state.loaded = false; state.loading = true; state.failed = false;
   const cityName = CITIES[state.city].name;
-  setProgress(8);
-  setStatus("Etap 1/3 - łączenie z Overpass API (" + cityName + ")…");
   const [lat, lon] = CITIES[state.city].center;
-  const q = `[out:json][timeout:30];
-(
-  nwr["amenity"="police"](around:${FETCH_RADIUS},${lat},${lon});
-  node["man_made"="surveillance"](around:${FETCH_RADIUS},${lat},${lon});
-  way["leisure"~"^(park|garden)$"](around:${FETCH_RADIUS},${lat},${lon});
-  way["natural"~"^(scrub|wood)$"](around:${FETCH_RADIUS},${lat},${lon});
-  way["landuse"~"^(forest|meadow|grass|village_green|cemetery|allotments)$"](around:${FETCH_RADIUS},${lat},${lon});
-  node["amenity"="shelter"](around:${FETCH_RADIUS},${lat},${lon});
-);
-out tags center;`;
+  const ar = `(around:${FETCH_RADIUS},${lat},${lon})`;
+  // Faza 1: mały pakiet krytyczny (szybki na wolnym łączu): posterunki, kamery, altanki
+  const qSmall = `[out:json][timeout:25];(nwr["amenity"="police"]${ar};node["man_made"="surveillance"]${ar};node["amenity"="shelter"]${ar};);out center;`;
+  // Faza 2: ciężka warstwa zieleni (parki, krzaki, lasy, łąki, cmentarze, działki)
+  const qGreen = `[out:json][timeout:25];(way["leisure"~"^(park|garden)$"]${ar};way["natural"~"^(scrub|wood)$"]${ar};way["landuse"~"^(forest|meadow|grass|village_green|cemetery|allotments)$"]${ar};);out center;`;
+  const data = {police:[], cameras:[], green:[], izby:[]};
   try{
-    const osm = await overpass(q);             // etap 1: posterunki, kamery, zieleń
-    if (token !== state.loadToken) return;     // w międzyczasie przełączono miasto
-    setProgress(65);
-    setStatus("Etap 2/3 - geokodowanie izb wytrzeźwień (Nominatim)…");
-    const izby = await geocodeIzby(state.city);
+    setProgress(8);
+    setStatus("Etap 1/3 - posterunki i kamery (" + cityName + ")…");
+    parseElements(await overpass(qSmall), data);
     if (token !== state.loadToken) return;
-    setProgress(88);
-    setStatus("Etap 3/3 - rysowanie warstw…");
-    const police = [], cameras = [], green = [];
-    for (const el of osm.elements || []){
-      const pos = el.type === "node" ? [el.lat, el.lon] : (el.center ? [el.center.lat, el.center.lon] : null);
-      if (!pos) continue;
-      const t = el.tags || {};
-      if (t.amenity === "police") police.push({pos, name: t.name || "Posterunek"});
-      else if (t.man_made === "surveillance") cameras.push({pos});
-      else green.push({pos, name: t.name || (t.amenity === "shelter" ? "Altanka" :
-        t.natural === "scrub" ? "Krzaki" : t.landuse === "cemetery" ? "Cmentarz (cisza gwarantowana)" :
-        t.landuse === "allotments" ? "Ogródki działkowe" : "Teren zielony")});
-    }
-    state.data = {police, cameras, green, izby};
-    state.loaded = true;
+    setProgress(45);
+    setStatus("Etap 2/3 - izby wytrzeźwień (Nominatim)…");
+    data.izby = await geocodeIzby(state.city);
+    if (token !== state.loadToken) return;
+    state.data = data; state.loaded = true;    // mapa użyteczna już po fazie krytycznej
     if (map) drawBase();
+    setProgress(70);
+    setStatus("Etap 3/3 - warstwa zieleni (największy pakiet)…");
+    parseElements(await overpass(qGreen), data);
+    if (token !== state.loadToken) return;
+    state.loading = false;
     setProgress(100);
-    setStatus(cityName + " - posterunki: " + police.length + ", kamery: " + cameras.length +
-      ", tereny zielone: " + green.length + ", izby wytrzeźwień: " + izby.length + ".");
+    setStatus(cityName + " - posterunki: " + data.police.length + ", kamery: " + data.cameras.length +
+      ", tereny zielone: " + data.green.length + ", izby wytrzeźwień: " + data.izby.length + ".");
     setTimeout(() => { if (token === state.loadToken) setProgress(null); }, 900);
   } catch(e){
     if (token !== state.loadToken) return;
-    state.data = {police:[], cameras:[], green:[], izby:[]};
+    state.loading = false; state.failed = true;
     setProgress(100, true);
-    setStatus("Nie udało się pobrać danych z OpenStreetMap (Overpass). Sprawdź połączenie i odśwież - bez danych nie liczymy, Instytut nie zgaduje.");
+    const why = e && e.name === "AbortError" ? "przekroczony limit czasu 40 s (wolne łącze)" : (e && e.message ? e.message : "błąd sieci");
+    setStatus("Dane OSM nie dojechały - przyczyna: " + why + ". Dotknij tego komunikatu, aby ponowić.");
   }
 }
 function drawBase(){
@@ -487,7 +494,11 @@ function fmtTime(min){
 }
 function runAnalysis(){
   if (!map){ setStatus("Mapa nie działa bez biblioteki Leaflet - sprawdź połączenie i odśwież stronę."); return; }
-  if (!state.loaded){ setStatus("Dane jeszcze się ładują albo nie dojechały - spróbuj za chwilę."); return; }
+  if (!state.loaded){
+    if (state.failed){ setStatus("Ponawiam pobieranie danych OSM…"); loadCityData(); }
+    else setStatus("Dane jeszcze się ładują - chwila.");
+    return;
+  }
   const weight = Math.min(250, Math.max(35, parseFloat(document.getElementById("weight").value) || 80));
   const sex = document.getElementById("sex").value;
   const hours = Math.max(0, parseFloat(document.getElementById("hours").value) || 0);
@@ -575,6 +586,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("v-" + d).textContent = state.counts[d];
   }));
   document.getElementById("calc").addEventListener("click", runAnalysis);
+  document.getElementById("status").addEventListener("click", () => { if (state.failed) loadCityData(); });
   document.getElementById("handle").addEventListener("click", () => setSheet(!document.getElementById("panel").classList.contains("min")));
   map && map.on("click", () => setSheet(true));          // dotknięcie mapy zwija panel - widać cały obraz
   setNet(navigator.onLine !== false);
