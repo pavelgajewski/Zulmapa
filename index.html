@@ -15,7 +15,7 @@
   --bg:#ffffff; --surface:#f8f9fa; --line:#dadce0;
   --ink:#202124; --ink-2:#3c4043; --ink-3:#5f6368;
   --brand:#1a73e8; --brand-tonal:#e8f0fe; --onbrand:#ffffff;
-  --tint-blue:#e8f0fe; --tint-green:#e6f4ea; --tint-yellow:#fef7e0; --tint-red:#fce8e6;
+  --tint-blue:#e8f0fe; --tint-green:#e6f4ea; --tint-yellow:#fef7e0; --tint-red:#fce8e6; --tint-purple:#f0e9fe;
   --font:"Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
   --shadow:0 1px 3px rgba(60,64,67,.15), 0 4px 8px rgba(60,64,67,.08);
 }
@@ -24,7 +24,7 @@
     --bg:#1b1c1e; --surface:#252629; --line:#45474b;
     --ink:#e8eaed; --ink-2:#bdc1c6; --ink-3:#9aa0a6;
     --brand:#8ab4f8; --brand-tonal:#1f3250; --onbrand:#1b1c1e;
-    --tint-blue:#1f3250; --tint-green:#1e3a29; --tint-yellow:#453a17; --tint-red:#46231f;
+    --tint-blue:#1f3250; --tint-green:#1e3a29; --tint-yellow:#453a17; --tint-red:#46231f; --tint-purple:#2e2447;
     color-scheme:dark;
   }
 }
@@ -32,7 +32,7 @@
   --bg:#1b1c1e; --surface:#252629; --line:#45474b;
   --ink:#e8eaed; --ink-2:#bdc1c6; --ink-3:#9aa0a6;
   --brand:#8ab4f8; --brand-tonal:#1f3250; --onbrand:#1b1c1e;
-  --tint-blue:#1f3250; --tint-green:#1e3a29; --tint-yellow:#453a17; --tint-red:#46231f;
+  --tint-blue:#1f3250; --tint-green:#1e3a29; --tint-yellow:#453a17; --tint-red:#46231f; --tint-purple:#2e2447;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -80,14 +80,14 @@ a{color:var(--brand); text-decoration:none} a:hover{text-decoration:underline}
 /* Desktop: mapa na cały ekran, panel jako pływająca karta */
 @media (min-width:861px){
   .panel{left:max(12px, env(safe-area-inset-left,0px)); top:12px; bottom:12px; width:384px;
-    border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow)}
+    border:1px solid var(--line); border-radius:20px; box-shadow:var(--shadow)}
   .mapstatus{left:auto; right:64px; transform:none; max-width:38%}
 }
 /* Telefon: mapa na cały ekran, panel jako boczna szuflada z lewej */
 .drawerbtn{display:none}
 @media (max-width:860px){
   .panel{left:0; top:0; bottom:0; width:min(86vw,360px);
-    border-right:1px solid var(--line); border-radius:0 16px 16px 0;
+    border-right:1px solid var(--line); border-radius:0 20px 20px 0;
     box-shadow:2px 0 12px rgba(32,33,36,.25); gap:14px; padding-top:56px;
     padding-left:max(16px, env(safe-area-inset-left,0px));
     padding-bottom:max(20px, env(safe-area-inset-bottom,0px));
@@ -97,8 +97,6 @@ a{color:var(--brand); text-decoration:none} a:hover{text-decoration:underline}
     left:max(10px, env(safe-area-inset-left,0px)); top:10px; width:44px; height:44px; border-radius:50%;
     background:var(--bg); border:1px solid var(--line); box-shadow:var(--shadow); font-size:19px;
     cursor:pointer; color:var(--ink-2)}
-  .legbtn{bottom:auto; top:10px}
-  .legend{bottom:auto; top:64px}
   .seg button{padding:0 14px}
   .logo .word{display:none}
   .net .lbl{display:none}
@@ -112,14 +110,14 @@ a{color:var(--brand); text-decoration:none} a:hover{text-decoration:underline}
   display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex:none}
 .hint{font-size:13px; color:var(--ink-3); margin:0}
 .point{display:flex; gap:8px; align-items:center; font-size:14px; color:var(--ink-2);
-  background:var(--surface); border-radius:8px; padding:9px 12px}
+  background:var(--surface); border-radius:12px; padding:9px 12px}
 .fieldrow{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .fieldrow label{font-size:13.5px; color:var(--ink-2)}
 input[type=number], select{height:40px; border:1px solid var(--line); border-radius:4px; background:var(--bg);
   color:var(--ink); font-size:15px; padding:0 10px; font-family:inherit}
 input[type=number]{width:74px}
 .drink{display:grid; grid-template-columns:32px 1fr auto; align-items:center; gap:10px;
-  border:1px solid var(--line); border-radius:8px; padding:8px 10px}
+  border:1px solid var(--line); border-radius:14px; padding:8px 10px}
 .drink .ico{font-size:21px; text-align:center}
 .drink .nm{font-size:14.5px; line-height:1.25} .drink .nm small{display:block; font-size:12px; color:var(--ink-3)}
 .stepper{display:flex; align-items:center; gap:6px}
@@ -129,17 +127,34 @@ input[type=number]{width:74px}
 .go{height:48px; border:none; border-radius:9999px; background:var(--brand); color:var(--onbrand); font-size:15px;
   font-weight:500; cursor:pointer; padding:0 22px}
 
-/* Wyniki w panelu */
+/* Wyniki w panelu - kafle gradientowe w stylu paneli Usemaps */
 .results{display:none; flex-direction:column; gap:12px}
 .results.show{display:flex}
 .resgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-.tonal{border-radius:8px; padding:14px 12px; display:flex; flex-direction:column; gap:3px}
-.tonal .eyebrow{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3)}
-.tonal .big{font-size:21px; font-weight:500; line-height:1.15; font-variant-numeric:tabular-nums}
-.tonal .sub{font-size:12.5px; color:var(--ink-2)}
-.t-blue{background:var(--tint-blue)} .t-green{background:var(--tint-green)}
-.t-yellow{background:var(--tint-yellow)} .t-red{background:var(--tint-red)}
-.verdict{border:1px solid var(--line); border-radius:8px; padding:12px 14px; display:flex; gap:10px; align-items:flex-start}
+.tonal{border-radius:16px; padding:16px 14px; display:flex; flex-direction:column; gap:4px; color:#fff}
+.tonal .eyebrow{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:rgba(255,255,255,.85)}
+.tonal .big{font-size:22px; font-weight:700; line-height:1.15; font-variant-numeric:tabular-nums}
+.tonal .sub{font-size:12.5px; color:rgba(255,255,255,.92)}
+.t-red{background:linear-gradient(135deg,#ea4335,#a142f4)}
+.t-blue{background:linear-gradient(135deg,#4285f4,#6f5bd6)}
+.t-yellow{background:linear-gradient(135deg,#f9ab00,#ea6b35)}
+.t-green{background:linear-gradient(135deg,#34a853,#2b8bd9)}
+/* Warstwy: wiersz z kafelkiem ikony, opisem i przełącznikiem */
+.lrow{display:grid; grid-template-columns:44px 1fr auto; gap:12px; align-items:center;
+  border:1px solid var(--line); border-radius:16px; padding:10px 12px}
+.ltile{width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; flex:none}
+.lt-red{background:var(--tint-red)} .lt-yellow{background:var(--tint-yellow)} .lt-purple{background:var(--tint-purple)}
+.lt-blue{background:var(--tint-blue)} .lt-green{background:var(--tint-green)}
+.lrow .nm{font-size:14.5px; font-weight:700; line-height:1.25}
+.lrow .nm small{display:block; font-size:12px; font-weight:400; color:var(--ink-3); margin-top:1px}
+.switch{position:relative; width:46px; height:28px; flex:none}
+.switch input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer}
+.switch .tr{position:absolute; inset:0; border-radius:9999px; background:var(--line); transition:background .15s}
+.switch .tr::after{content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%;
+  background:#fff; box-shadow:0 1px 2px rgba(32,33,36,.4); transition:left .15s}
+.switch input:checked + .tr{background:var(--brand)}
+.switch input:checked + .tr::after{left:21px}
+.verdict{border:1px solid var(--line); border-radius:16px; padding:12px 14px; display:flex; gap:10px; align-items:flex-start}
 .verdict .vi{font-size:20px; line-height:1.2}
 .verdict p{margin:0; font-size:14px; color:var(--ink-2)} .verdict b{color:var(--ink); font-weight:500}
 
@@ -149,15 +164,6 @@ input[type=number]{width:74px}
   left:50%; transform:translateX(-50%); top:12px; max-width:min(92%,560px); text-align:center;
   transition:opacity .4s ease}
 .mapstatus.hide{opacity:0; pointer-events:none}
-.legbtn{position:absolute; z-index:600; right:max(12px, env(safe-area-inset-right,0px)); bottom:44px;
-  width:44px; height:44px; border-radius:50%; background:var(--bg); border:1px solid var(--line);
-  box-shadow:var(--shadow); font-size:19px; cursor:pointer; color:var(--ink-2)}
-.legend{position:absolute; z-index:600; right:max(12px, env(safe-area-inset-right,0px)); bottom:96px;
-  background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:12.5px;
-  color:var(--ink-2); box-shadow:var(--shadow); display:none; flex-direction:column; gap:6px}
-.legend.show{display:flex}
-.legend span{display:inline-flex; align-items:center; gap:7px}
-.dot{width:10px; height:10px; border-radius:50%; display:inline-block; flex:none}
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]) .leaflet-layer,
   :root:not([data-theme="light"]) .leaflet-control-zoom,
@@ -170,7 +176,7 @@ input[type=number]{width:74px}
 .navbtn{height:48px; border:1px solid var(--line); border-radius:9999px; background:var(--bg); color:var(--brand);
   font-size:15px; font-weight:500; cursor:pointer; padding:0 22px}
 .navsteps{display:flex; flex-direction:column; gap:10px; margin-top:4px}
-.navstep{display:flex; gap:12px; align-items:flex-start; border:1px solid var(--line); border-radius:8px; padding:10px 12px}
+.navstep{display:flex; gap:12px; align-items:flex-start; border:1px solid var(--line); border-radius:14px; padding:10px 12px}
 .navstep .ph{font-size:30px; line-height:1.1; flex:none; text-align:center}
 .navstep .ph small{display:block; font-size:9px; color:var(--ink-3); margin-top:2px}
 .navstep p{margin:0; font-size:14px; color:var(--ink-2)} .navstep b{color:var(--ink); font-weight:500}
@@ -250,6 +256,25 @@ dialog .close{float:right; margin-top:4px}
         <button class="go" id="calc">Oblicz trasę czołgania →</button>
       </div>
 
+      <div class="step">
+        <h2>Warstwy mapy</h2>
+        <div class="lrow"><div class="ltile lt-red">🚓</div>
+          <div class="nm">Posterunki<small>Policja i Straż Miejska. Czerwone koło: zasięg dojazdu patrolu - rośnie z promilami.</small></div>
+          <label class="switch"><input type="checkbox" data-layer="police" checked><span class="tr"></span></label></div>
+        <div class="lrow"><div class="ltile lt-yellow">🎥</div>
+          <div class="nm">Kamery monitoringu<small>Żółte kółko: pole widzenia, promień: 80 m.</small></div>
+          <label class="switch"><input type="checkbox" data-layer="cameras" checked><span class="tr"></span></label></div>
+        <div class="lrow"><div class="ltile lt-purple">🏚️</div>
+          <div class="nm">Izby wytrzeźwień<small>Fioletowa przerywana strefa, promień: 680 m.</small></div>
+          <label class="switch"><input type="checkbox" data-layer="izby" checked><span class="tr"></span></label></div>
+        <div class="lrow"><div class="ltile lt-blue">🧭</div>
+          <div class="nm">Trasa i strefa wolności<small>🍺 Twój punkt, 🏕️ cel, niebieska przerywana linia: azymut czołgania.</small></div>
+          <label class="switch"><input type="checkbox" data-layer="route" checked><span class="tr"></span></label></div>
+        <div class="lrow"><div class="ltile lt-green">🌿</div>
+          <div class="nm">Tereny zielone<small>Kilkanaście tysięcy obiektów - liczone w analizie, nierysowane, żeby nie zabić telefonu.</small></div>
+          <span style="font-size:12px; color:var(--ink-3)">w tle</span></div>
+      </div>
+
       <div class="results" id="results" aria-live="polite">
         <div class="resgrid">
           <div class="tonal t-red"><div class="eyebrow">Stan zajebania</div><div class="big" id="rPromile">–</div><div class="sub" id="rStan">–</div></div>
@@ -267,14 +292,6 @@ dialog .close{float:right; margin-top:4px}
       <div id="map" role="application" aria-label="Mapa"></div>
       <div class="mapstatus" id="status" role="status">Ładowanie danych z OpenStreetMap…</div>
       <button class="drawerbtn" id="drawerBtn" aria-label="Panel danych" aria-expanded="true">✕</button>
-      <button class="legbtn" id="legBtn" aria-label="Legenda" aria-expanded="false">🗺</button>
-      <div class="legend" id="legend">
-        <span><span class="dot" style="background:#ea4335"></span>Posterunek + zasięg dojazdu</span>
-        <span><span class="dot" style="background:#f9ab00"></span>Kamera monitoringu</span>
-        <span><span class="dot" style="background:#a142f4"></span>Izba wytrzeźwień (680 m)</span>
-        <span><span class="dot" style="background:#34a853"></span>Zieleń / krzaki / altanki</span>
-        <span><span class="dot" style="background:#4285f4"></span>Twój punkt i trasa</span>
-      </div>
     </div>
   </div>
 </div>
@@ -388,11 +405,17 @@ function pickSpot(user, data, pRadius){
 
 /* ===================== Mapa ===================== */
 const HAS_L = typeof L !== "undefined";
-let map = null, baseMarkers = null, routeLayer = null, userMarker = null;
+let map = null, userMarker = null;
+const LG = {}, ZG = {};  // LG: markery per kategoria, ZG: strefy per kategoria
+function clearGroups(gs){ for (const k in gs) gs[k] && gs[k].clearLayers(); }
+function toggleLayer(k, on){
+  if (!map) return;
+  for (const g of [LG[k], ZG[k]]) if (g){ on ? map.addLayer(g) : map.removeLayer(g); }
+}
 function initMap(){
   if (!HAS_L){ setStatus("Nie udało się wczytać biblioteki mapy (Leaflet, CDN unpkg). Sprawdź połączenie z internetem i odśwież stronę."); return; }
-  baseMarkers = L.layerGroup(); routeLayer = L.layerGroup();
   map = L.map("map", {zoomControl:false}).setView(CITIES[state.city].center, 14);
+  for (const k of ["police","cameras","izby","route"]){ LG[k] = L.layerGroup().addTo(map); ZG[k] = L.layerGroup().addTo(map); }
   if (!isSheet()) L.control.zoom({position:"topright"}).addTo(map);   // na dotyku zoom szczypaniem, bez ikon
   const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">autorzy OpenStreetMap</a>'
@@ -401,7 +424,6 @@ function initMap(){
   tiles.on("tileerror", () => { if (!tileWarned){ tileWarned = true;
     setStatus("Kafle mapy OSM nie dochodzą - sprawdź połączenie z siecią."); } });
   tiles.on("load", () => { tileWarned = false; });
-  baseMarkers.addTo(map); routeLayer.addTo(map);
   map.on("click", e => setPoint([e.latlng.lat, e.latlng.lng], "Wybrany punkt (" + e.latlng.lat.toFixed(4) + ", " + e.latlng.lng.toFixed(4) + ")"));
 }
 function emojiIcon(ch){ return L.divIcon({className:"", html:'<div class="pinemoji">'+ch+"</div>", iconSize:[24,24], iconAnchor:[12,12]}); }
@@ -595,10 +617,10 @@ async function loadLive(token){
   }
 }
 function drawBase(){
-  baseMarkers.clearLayers();
-  for (const p of state.data.police) L.marker(p.pos, {icon: emojiIcon("🚓"), title:p.name}).bindPopup("👮 " + p.name).addTo(baseMarkers);
-  for (const cm of state.data.cameras) L.circleMarker(cm.pos, {radius:5.5, color:"#b06000", fillColor:"#f9ab00", fillOpacity:.95, weight:1.5}).addTo(baseMarkers);
-  for (const iz of state.data.izby) L.marker(iz.pos, {icon: emojiIcon("🏚️"), title:iz.name}).bindPopup("🛏️ <b>" + iz.name + "</b><br>" + iz.addr).addTo(baseMarkers);
+  clearGroups(LG); clearGroups(ZG);
+  for (const p of state.data.police) L.marker(p.pos, {icon: emojiIcon("🚓"), title:p.name}).bindPopup("👮 " + p.name).addTo(LG.police);
+  for (const cm of state.data.cameras) L.circleMarker(cm.pos, {radius:5.5, color:"#b06000", fillColor:"#f9ab00", fillOpacity:.95, weight:1.5}).addTo(LG.cameras);
+  for (const iz of state.data.izby) L.marker(iz.pos, {icon: emojiIcon("🏚️"), title:iz.name}).bindPopup("🛏️ <b>" + iz.name + "</b><br>" + iz.addr).addTo(LG.izby);
 }
 
 /* ===================== Analiza i prezentacja ===================== */
@@ -623,10 +645,10 @@ function runAnalysis(){
   const mv = moveMode(p);
   const pRad = policeRadius(p);
 
-  routeLayer.clearLayers();
-  for (const z of state.data.police)  L.circle(z.pos, {radius:pRad, color:"#ea4335", weight:1, fillColor:"#ea4335", fillOpacity:.10}).addTo(routeLayer);
-  for (const z of state.data.izby)    L.circle(z.pos, {radius:IZBA_RADIUS, color:"#a142f4", weight:1.5, dashArray:"6 6", fillColor:"#a142f4", fillOpacity:.10}).addTo(routeLayer);
-  for (const z of state.data.cameras) L.circle(z.pos, {radius:CAMERA_RADIUS, color:"#f9ab00", weight:1, fillColor:"#f9ab00", fillOpacity:.12}).addTo(routeLayer);
+  clearGroups(ZG); LG.route.clearLayers();
+  for (const z of state.data.police)  L.circle(z.pos, {radius:pRad, color:"#ea4335", weight:1, fillColor:"#ea4335", fillOpacity:.10}).addTo(ZG.police);
+  for (const z of state.data.izby)    L.circle(z.pos, {radius:IZBA_RADIUS, color:"#a142f4", weight:1.5, dashArray:"6 6", fillColor:"#a142f4", fillOpacity:.10}).addTo(ZG.izby);
+  for (const z of state.data.cameras) L.circle(z.pos, {radius:CAMERA_RADIUS, color:"#f9ab00", weight:1, fillColor:"#f9ab00", fillOpacity:.12}).addTo(ZG.cameras);
 
   const user = state.point;
   const spot = pickSpot(user, state.data, pRad);
@@ -652,8 +674,8 @@ function runAnalysis(){
     document.getElementById("rDir").textContent = "kieruj się na: " + bearingName(user, spot.g.pos);
     document.getElementById("rTime").textContent = fmtTime(timeMin);
     document.getElementById("rEta").textContent = mv.mode === "Czołgiem" ? "czołgania" : "marszu (kontrolowanego)";
-    L.polyline([user, spot.g.pos], {color:"#4285f4", weight:4, dashArray:"8 8"}).addTo(routeLayer);
-    const mk = L.marker(spot.g.pos, {icon: emojiIcon(spot.safe ? "🏕️" : "🌿")}).addTo(routeLayer);
+    L.polyline([user, spot.g.pos], {color:"#4285f4", weight:4, dashArray:"8 8"}).addTo(LG.route);
+    const mk = L.marker(spot.g.pos, {icon: emojiIcon(spot.safe ? "🏕️" : "🌿")}).addTo(LG.route);
     if (spot.safe){
       mk.bindPopup("✅ <b>Strefa wolności: " + spot.g.name + "</b><br>Jesteś poza zasięgiem posterunków (dojazd: " + pRad + " m), kamer i izby (680 m).").openPopup();
       document.getElementById("rIcon").textContent = "🏕️";
@@ -716,7 +738,7 @@ function switchCity(city){
   document.getElementById("btnPoznan").setAttribute("aria-pressed", String(city === "poznan"));
   document.getElementById("btnLublin").setAttribute("aria-pressed", String(city === "lublin"));
   const c = CITIES[city];
-  if (map){ routeLayer.clearLayers(); baseMarkers.clearLayers(); map.setView(c.center, 14); }
+  if (map){ clearGroups(LG); clearGroups(ZG); map.setView(c.center, 14); }
   document.getElementById("results").classList.remove("show");
   setPoint(c.center, c.defaultLabel);
   loadCityData();
@@ -736,11 +758,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("status").addEventListener("click", () => { if (state.failed) loadCityData(); });
   document.getElementById("drawerBtn").addEventListener("click", () => setSheet(!document.getElementById("panel").classList.contains("min")));
   document.getElementById("navBtn").addEventListener("click", buildNav);
-  const legBtn = document.getElementById("legBtn"), legend = document.getElementById("legend");
-  legBtn.addEventListener("click", () => {
-    const on = legend.classList.toggle("show");
-    legBtn.setAttribute("aria-expanded", String(on));
-  });
+  document.querySelectorAll('.lrow input[data-layer]').forEach(cb =>
+    cb.addEventListener("change", () => toggleLayer(cb.dataset.layer, cb.checked)));
   setNet(navigator.onLine !== false);
   window.addEventListener("online",  () => { setNet(true); if (!state.loaded) loadCityData(); });
   window.addEventListener("offline", () => setNet(false));
