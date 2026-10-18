@@ -31,7 +31,7 @@ const KINDS = {
   garden:      { min: 3000, label: "Ogród" },
   wood:        { min: 500,  label: "Zadrzewienie" },
   forest:      { min: 500,  label: "Las" },
-  scrub:       { min: 300,  label: "Krzaki" },
+  scrub:       { min: 10,   label: "Krzaki" },   // wystarczy jeden duży krzak
   grass:       { min: 5000, label: "Duży trawnik" },
   village_green:{ min: 5000, label: "Skwer" },
   meadow:      { min: 2000, label: "Łąka" },
@@ -164,6 +164,9 @@ function parseSmall(osm, into, stats) {
     else if (t.man_made === "surveillance") {
       if (t.surveillance === "indoor") { stats.cam_indoor++; continue; }
       into.cameras.push({ pos: p });
+    } else if (t.natural === "shrub") {                 // pojedynczy krzak mapowany jako punkt
+      stats.shrubs++;
+      into.green.push({ pos: p, pts: [p], name: t.name || "Duży krzak", kind: "shrub", area: 0 });
     } else if (t.amenity === "shelter") {
       if (isTransitShelter(t) || !SHELTER_OK.has(t.shelter_type)) { stats.shelter_skipped++; continue; }
       into.green.push({ pos: p, pts: [p], name: t.name || "Altanka", kind: "shelter", area: 0 });
@@ -221,12 +224,12 @@ async function geocodeIzby(cityKey) {
 async function buildCity(cityKey) {
   const [lat, lon] = CITIES[cityKey].center;
   const ar = `(around:${FETCH_RADIUS},${lat},${lon})`;
-  const qSmall = `[out:json][timeout:90];(nwr["amenity"="police"]${ar};node["man_made"="surveillance"]${ar};node["amenity"="shelter"]${ar};);out center;`;
+  const qSmall = `[out:json][timeout:90];(nwr["amenity"="police"]${ar};node["man_made"="surveillance"]${ar};node["amenity"="shelter"]${ar};node["natural"="shrub"]${ar};);out center;`;
   const sel = (f) => `way${f}${ar};rel${f}${ar};`;
   const qGreen = `[out:json][timeout:150];(` +
     sel(`["leisure"~"^(park|garden)$"]`) + sel(`["natural"~"^(scrub|wood)$"]`) +
     sel(`["landuse"~"^(forest|meadow|grass|village_green|cemetery|allotments)$"]`) + `);out geom;`;
-  const stats = { cam_indoor: 0, shelter_skipped: 0, no_geom: 0, too_small: 0, no_interior: 0 };
+  const stats = { cam_indoor: 0, shelter_skipped: 0, shrubs: 0, no_geom: 0, too_small: 0, no_interior: 0 };
   const data = { schema: 1, version: 2, city: cityKey, generated_at: new Date().toISOString(), police: [], cameras: [], green: [], izby: [] };
   parseSmall(await overpass(qSmall), data, stats);
   await sleep(1500); // polityka Overpass: bez równoległości, przerwa między zapytaniami
