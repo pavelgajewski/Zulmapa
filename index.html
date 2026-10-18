@@ -266,7 +266,7 @@ dialog .close{float:right; margin-top:4px}
           <div class="nm">Trasa i strefa wolności<small>Niebieska pinezka: Twój punkt, zielona z flagą: cel, przerywana linia: azymut czołgania.</small></div>
           <label class="switch"><input type="checkbox" data-layer="route" checked><span class="tr"></span></label></div>
         <div class="lrow"><div class="ltile lt-green" data-g="leaf"></div>
-          <div class="nm">Tereny zielone<small>Kilkanaście tysięcy obiektów - liczone w analizie, nierysowane, żeby nie zabić telefonu.</small></div>
+          <div class="nm">Tereny zielone<small>Parki, lasy, krzaki, łąki, cmentarze i działki z progiem powierzchni; pasy trawy przy ulicach i wiaty przystankowe odfiltrowane.</small></div>
           <span style="font-size:12px; color:var(--ink-3)">w tle</span></div>
       </div>
 
@@ -390,10 +390,18 @@ function dangerMargin(pt, data, pRadius){
   for (const z of data.cameras) m = Math.min(m, haversine(pt, z.pos) - CAMERA_RADIUS);
   return m; // >0: poza wszystkimi strefami
 }
+const MIN_MARGIN = 40;   // m - minimalny zapas od każdej strefy zagrożenia, żeby uznać miejsce za strefę wolności
 function pickSpot(user, data, pRadius){
   if (!data.green.length) return null;
-  const scored = data.green.map(g => ({ g, margin: dangerMargin(g.pos, data, pRadius), dist: haversine(user, g.pos) }));
-  const safe = scored.filter(s => s.margin > 0).sort((a,b) => a.dist - b.dist);
+  const scored = data.green.map(g => {
+    let best = null;
+    for (const pt of (g.pts && g.pts.length ? g.pts : [g.pos])){       // punkty wewnątrz poligonu (dane v2)
+      const m = dangerMargin(pt, data, pRadius);
+      if (!best || m > best.margin) best = {pt, margin:m};
+    }
+    return { g, pt:best.pt, margin:best.margin, dist: haversine(user, best.pt) };
+  });
+  const safe = scored.filter(s => s.margin >= MIN_MARGIN).sort((a,b) => a.dist - b.dist);
   if (safe.length) return {...safe[0], safe:true};
   scored.sort((a,b) => b.margin - a.margin);    // najmniejsza gęstość interwencji
   return {...scored[0], safe:false};
@@ -541,7 +549,9 @@ function parseElements(osm, into){
     if (!pos || pos[0] == null) continue;
     const t = el.tags || {};
     if (t.amenity === "police") into.police.push({pos, name: t.name || "Posterunek"});
-    else if (t.man_made === "surveillance") into.cameras.push({pos});
+    else if (t.man_made === "surveillance"){ if (t.surveillance !== "indoor") into.cameras.push({pos}); }
+    else if (t.amenity === "shelter" && (t.shelter_type === "public_transport" || t.public_transport || t.highway === "bus_stop" ||
+      !["picnic_shelter","gazebo","lean_to","basic_hut","weather_shelter"].includes(t.shelter_type))) continue;  // wiaty przystankowe
     else into.green.push({pos, name: t.name || (t.amenity === "shelter" ? "Altanka" :
       t.natural === "scrub" ? "Krzaki" : t.landuse === "cemetery" ? "Cmentarz (cisza gwarantowana)" :
       t.landuse === "allotments" ? "Ogródki działkowe" : "Teren zielony")});
@@ -597,7 +607,7 @@ async function loadLive(token){
   // Faza 1: mały pakiet krytyczny (szybki na wolnym łączu): posterunki, kamery, altanki
   const qSmall = `[out:json][timeout:25];(nwr["amenity"="police"]${ar};node["man_made"="surveillance"]${ar};node["amenity"="shelter"]${ar};);out center;`;
   // Faza 2: ciężka warstwa zieleni (parki, krzaki, lasy, łąki, cmentarze, działki)
-  const qGreen = `[out:json][timeout:25];(way["leisure"~"^(park|garden)$"]${ar};way["natural"~"^(scrub|wood)$"]${ar};way["landuse"~"^(forest|meadow|grass|village_green|cemetery|allotments)$"]${ar};);out center;`;
+  const qGreen = `[out:json][timeout:25];(way["leisure"="park"]${ar};way["natural"~"^(scrub|wood)$"]${ar};way["landuse"~"^(forest|meadow|cemetery|allotments)$"]${ar};);out center;`;
   const data = {police:[], cameras:[], green:[], izby:[]};
   try{
     setProgress(5, false, 42);
@@ -638,6 +648,11 @@ function drawBase(){
 }
 
 /* ===================== Analiza i prezentacja ===================== */
+function spotName(g){                     // zwraca HTML-bezpieczny tekst (nazwy z OSM)
+  if (!g.area) return esc(g.name);
+  const a = g.area >= 10000 ? (g.area/10000).toFixed(1).replace(".", ",") + " ha" : Math.round(g.area/100)*100 + " m²";
+  return esc(g.name) + " (powierzchnia: " + a + ")";
+}
 function fmtDist(m){ return m >= 1000 ? (m/1000).toFixed(1).replace(".", ",") + " km" : Math.round(m) + " m"; }
 function fmtTime(min){
   if (min < 60) return Math.max(1, Math.round(min)) + " min";
@@ -685,24 +700,24 @@ function runAnalysis(){
     const dist = spot.dist;
     const timeMin = (dist/1000) / mv.kmh * 60;
     document.getElementById("rDist").textContent = fmtDist(dist);
-    document.getElementById("rDir").textContent = "kieruj się na: " + bearingName(user, spot.g.pos);
+    document.getElementById("rDir").textContent = "kieruj się na: " + bearingName(user, spot.pt);
     document.getElementById("rTime").textContent = fmtTime(timeMin);
     document.getElementById("rEta").textContent = mv.mode === "Czołgiem" ? "czołgania" : "marszu (kontrolowanego)";
-    L.polyline([user, spot.g.pos], {color:"#4285f4", weight:4, dashArray:"8 8"}).addTo(LG.route);
-    const mk = L.marker(spot.g.pos, {icon: svgPin("#188038", spot.safe ? "flag" : "leaf")}).addTo(LG.route);
+    L.polyline([user, spot.pt], {color:"#4285f4", weight:4, dashArray:"8 8"}).addTo(LG.route);
+    const mk = L.marker(spot.pt, {icon: svgPin("#188038", spot.safe ? "flag" : "leaf")}).addTo(LG.route);
     if (spot.safe){
-      mk.bindPopup("✅ <b>Strefa wolności: " + spot.g.name + "</b><br>Jesteś poza zasięgiem posterunków (dojazd: " + pRad + " m), kamer i izby (680 m).").openPopup();
+      mk.bindPopup("✅ <b>Strefa wolności: " + spotName(spot.g) + "</b><br>Jesteś poza zasięgiem posterunków (dojazd: " + pRad + " m), kamer i izby (680 m).").openPopup();
       document.getElementById("rIcon").textContent = "🏕️";
-      document.getElementById("rVerdict").innerHTML = "<b>Strefa wolności: " + spot.g.name + ".</b> Margines od najbliższej strefy zagrożenia: " +
+      document.getElementById("rVerdict").innerHTML = "<b>Strefa wolności: " + spotName(spot.g) + ".</b> Margines od najbliższej strefy zagrożenia: " +
         fmtDist(spot.margin) + ". Dłuższa trasa, spokojniejszy sen." + (p >= 2 ? " Lepiej kieruj się nisko przy gruncie." : "");
     } else {
-      mk.bindPopup("🌿 <b>" + spot.g.name + "</b><br>Najniższa gęstość interwencji w zasięgu danych. Śpij czujnie.").openPopup();
+      mk.bindPopup("🌿 <b>" + spotName(spot.g) + "</b><br>Najniższa gęstość interwencji w zasięgu danych. Śpij czujnie.").openPopup();
       document.getElementById("rIcon").textContent = "🌙";
       document.getElementById("rVerdict").innerHTML = "<b>Pełnej strefy wolności brak</b> - każdy teren zielony w promieniu 3 km leży w czyimś zasięgu. " +
-        "Miejsce o najmniejszej gęstości interwencji: <b>" + spot.g.name + "</b> (niedobór marginesu: " + fmtDist(Math.abs(spot.margin)) + "). Krzaki, park, odludzie - i cicho.";
+        "Miejsce o najmniejszej gęstości interwencji: <b>" + spotName(spot.g) + "</b> (niedobór marginesu: " + fmtDist(Math.abs(spot.margin)) + "). Krzaki, park, odludzie - i cicho.";
     }
     if (isSheet()){ setSheet(true); setStatus("Trasa na mapie - wyniki i nawigacja w panelu ☰"); }  // szuflada zjeżdża, widać całą trasę
-    map.fitBounds(L.latLngBounds([user, spot.g.pos]).pad(0.25), {paddingTopLeft:[14, 64], paddingBottomRight:[14, 20]});
+    map.fitBounds(L.latLngBounds([user, spot.pt]).pad(0.25), {paddingTopLeft:[14, 64], paddingBottomRight:[14, 20]});
   }
   document.getElementById("results").classList.add("show");
   document.getElementById("results").scrollIntoView({behavior:"smooth", block:"nearest"});
@@ -714,18 +729,18 @@ function buildNav(){
   if (!r) return;
   const half = r.spot.dist / 2;
   const halfTime = fmtTime((half/1000) / r.mv.kmh * 60);
-  const dir = bearingName(r.user, r.spot.g.pos);
+  const dir = bearingName(r.user, r.spot.pt);
   const pose = r.mv.mode === "Czołgiem"
     ? "pozycja niska, łokcie szeroko, broda przy gruncie"
     : "marsz kontrolowany, wzrok na horyzont, ręce z kieszeni";
   const gmaps = "https://www.google.com/maps/dir/?api=1&origin=" + r.user[0] + "," + r.user[1] +
-    "&destination=" + r.spot.g.pos[0] + "," + r.spot.g.pos[1] + "&travelmode=walking";
+    "&destination=" + r.spot.pt[0] + "," + r.spot.pt[1] + "&travelmode=walking";
   const steps = [
     {ph:"🧍", txt:"<b>Krok 1 - pozycja wyjściowa.</b> Stan: " + r.p.toFixed(2).replace(".", ",") + " ‰, tryb: " + r.mv.mode.toLowerCase() + " (" + pose + ")."},
     {ph:"🧭", txt:"<b>Krok 2 - odcinek 1.</b> Kieruj się na " + esc(dir) + ": dystans " + fmtDist(half) + ", czas ok. " + halfTime + ". Omijaj strefy czerwone szerokim łukiem."},
     {ph:"🤮", txt:"<b>Krok 3 - punkt kontrolny.</b> Zalecenie Instytutu: zzygaj się po drodze. Odciąża żołądek, obniża środek ciężkości, poprawia aerodynamikę czołgania."},
     {ph:"🌿", txt:"<b>Krok 4 - odcinek 2.</b> Dystans " + fmtDist(half) + ", czas ok. " + halfTime + ". Po wejściu w zieleń: cisza, telefon na wibracje, zero śpiewania."},
-    {ph:"🛌", txt:"<b>Krok 5 - meta: " + esc(r.spot.g.name) + ".</b> Śpij na boku, nogi pod krzakiem, buty pod głowę. Pobudka przed świtem - patrole też śpią, ale krócej."}
+    {ph:"🛌", txt:"<b>Krok 5 - meta: " + spotName(r.spot.g) + ".</b> Śpij na boku, nogi pod krzakiem, buty pod głowę. Pobudka przed świtem - patrole też śpią, ale krócej."}
   ];
   const box = document.getElementById("navBox");
   box.innerHTML = steps.map(s =>
