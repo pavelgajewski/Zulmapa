@@ -24,9 +24,19 @@ jobs:
       - uses: actions/checkout@v4
       - name: Pobierz dane z Overpass i Nominatim
         run: node scripts/fetch_data.mjs
-      - name: Commit paczek danych (tylko gdy coś się zmieniło)
+      - name: Commit paczek danych na najnowszy main (tylko gdy coś się zmieniło)
         run: |
           git config user.name "zulmapa-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data
-          git diff --cached --quiet && echo "Bez zmian w danych" || { git commit -m "data: odświeżenie paczek OSM [skip ci]"; git push; }
+          cp -r data "$RUNNER_TEMP/newdata"
+          for i in 1 2 3; do
+            git fetch -q origin main
+            git checkout -q -B main origin/main
+            rm -rf data && cp -r "$RUNNER_TEMP/newdata" data
+            git add data
+            if git diff --cached --quiet; then echo "Bez zmian w danych"; exit 0; fi
+            git commit -q -m "data: odświeżenie paczek OSM [skip ci]"
+            git push -q origin main && exit 0
+            echo "Push odrzucony (main się zmienił), próba $i"; sleep 5
+          done
+          exit 1
