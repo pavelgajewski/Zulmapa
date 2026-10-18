@@ -6,29 +6,30 @@
 <title>ŻulMapa</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='4' cy='25' r='2.4' fill='%23ea4335'/%3E%3Ccircle cx='10.5' cy='20' r='2.4' fill='%23f9ab00'/%3E%3Ccircle cx='17' cy='24' r='2.4' fill='%2334a853'/%3E%3Cg transform='translate(24 15) rotate(112)'%3E%3Cpath d='M0 -9.5 C-5.2 -9.5 -8.6 -6.1 -8.6 -1.4 C-8.6 3.4 0 11.5 0 11.5 C0 11.5 8.6 3.4 8.6 -1.4 C8.6 -6.1 5.2 -9.5 0 -9.5 Z' fill='%234285f4'/%3E%3Ccircle cx='0' cy='-1.8' r='3.1' fill='white'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;700&family=Playfair+Display:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <style>
 /* App shell w stylistyce produktów Google: pasek + panel + mapa na cały ekran */
 :root{
+  --bg:#fbfaf7; --surface:#f1efe9; --line:#ddd9cf; --tile:#eceade;
+  --ink:#16150f; --ink-2:#403e37; --ink-3:#716e64;
+  --brand:#16150f; --brand-tonal:#e7e4da; --onbrand:#fbfaf7;
+  --danger:#d93025;
+  --go:linear-gradient(120deg,#e3edfd,#e4f2e7);
+  --tint-blue:#e9edf7; --tint-green:#e8f0e9; --tint-yellow:#f6efdc; --tint-red:#f6e5e2; --tint-purple:#efe8f5;
+  --font:"Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  --font-d:"Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  --shadow:0 1px 3px rgba(40,38,30,.12), 0 4px 10px rgba(40,38,30,.08);
+}
+:root[data-theme="dark"]{
   --bg:#0e0e0d; --surface:#171715; --line:#2d2c29; --tile:#1d1c1a;
   --ink:#f3f1ec; --ink-2:#c9c6bf; --ink-3:#8f8c86;
   --brand:#f3f1ec; --brand-tonal:#232320; --onbrand:#0e0e0d;
-  --danger:#ea4335;
+  --go:linear-gradient(120deg,#1c2a42,#17301f);
   --tint-blue:#1a1a22; --tint-green:#181d18; --tint-yellow:#201c12; --tint-red:#211514; --tint-purple:#1c1622;
-  --font:"Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-  --font-d:"Playfair Display",Georgia,"Times New Roman",serif;
   --shadow:0 1px 3px rgba(0,0,0,.5), 0 4px 10px rgba(0,0,0,.35);
   color-scheme:dark;
-}
-:root[data-theme="light"]{
-  --bg:#f7f5f0; --surface:#efede6; --line:#d8d5cc; --tile:#eae7df;
-  --ink:#131311; --ink-2:#3c3b37; --ink-3:#6d6b64;
-  --brand:#131311; --brand-tonal:#e4e1d8; --onbrand:#f7f5f0;
-  --tint-blue:#e9e9f2; --tint-green:#e7ece6; --tint-yellow:#f0ead9; --tint-red:#f2e2e0; --tint-purple:#ece5f2;
-  --shadow:0 1px 3px rgba(40,38,30,.12), 0 4px 10px rgba(40,38,30,.08);
-  color-scheme:light;
 }
 *{box-sizing:border-box}
 html,body{height:100%; margin:0}
@@ -47,11 +48,11 @@ a{color:var(--brand); text-decoration:none} a:hover{text-decoration:underline}
 .logo{display:flex; align-items:center; gap:10px; white-space:nowrap}
 .logo svg{display:block}
 .logo .word{display:flex; flex-direction:column; line-height:1.1}
-.logo .wm{font-family:var(--font-d); font-weight:700; font-size:20px; color:var(--ink); letter-spacing:.2px}
+.logo .wm{font-weight:800; font-size:19px; color:var(--ink); letter-spacing:-.2px}
 .logo .motto{font-size:8.5px; font-weight:500; text-transform:uppercase; letter-spacing:.17em; color:var(--ink-3); margin-top:2px}
 .seg{display:flex; border:1px solid var(--line); border-radius:3px; overflow:hidden; height:36px; flex:none}
 .seg button{border:none; background:var(--bg); color:var(--ink-2); font-size:14px; font-weight:500; padding:0 18px; cursor:pointer}
-.seg button[aria-pressed="true"]{background:var(--ink); color:var(--bg)}
+.seg button[aria-pressed="true"]{background:var(--tint-blue); color:var(--ink); font-weight:700}
 .bar .spacer{flex:1}
 .iconbtn{width:36px; height:36px; flex:none; border-radius:3px; border:1px solid var(--line); background:var(--bg);
   color:var(--ink-2); font-size:16px; font-weight:700; cursor:pointer}
@@ -99,38 +100,42 @@ a{color:var(--brand); text-decoration:none} a:hover{text-decoration:underline}
 
 /* Panel - kroki */
 .step{display:flex; flex-direction:column; gap:10px}
-.step h2{font-family:var(--font-d); font-size:18px; font-weight:600; margin:0; display:flex; align-items:baseline; gap:10px; letter-spacing:.2px}
+.step h2{font-size:16px; font-weight:700; margin:0; display:flex; align-items:baseline; gap:10px}
 .stepnum{font-family:var(--font); color:var(--ink-3); font-size:12px; font-weight:600; letter-spacing:.08em; flex:none}
 .stepnum::after{content:" —"}
 .hint{font-size:13px; color:var(--ink-3); margin:0}
 .point{display:flex; gap:10px; align-items:center; color:var(--ink-2); font-size:14px; color:var(--ink-2);
-  background:var(--surface); border:1px solid var(--line); border-radius:3px; padding:9px 12px}
+  background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:9px 12px}
 .fieldrow{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .fieldrow label{font-size:13.5px; color:var(--ink-2)}
 input[type=number], select{height:40px; border:1px solid var(--line); border-radius:4px; background:var(--bg);
   color:var(--ink); font-size:15px; padding:0 10px; font-family:inherit}
 input[type=number]{width:74px}
 .drink{display:grid; grid-template-columns:40px 1fr auto; align-items:center; gap:10px;
-  border:1px solid var(--line); border-radius:3px; padding:8px 10px}
-.drink .ico{width:40px; height:40px; border-radius:3px; background:var(--tile); border:1px solid var(--line); color:var(--ink-2);
+  border:1px solid var(--line); border-radius:10px; padding:8px 10px}
+.drink .ico{width:40px; height:40px; border-radius:8px; border:1px solid var(--line); color:var(--ink-2);
   display:flex; align-items:center; justify-content:center}
 .drink .ico .gi{width:22px; height:22px}
+.ico[data-g="beer"]{background:var(--tint-yellow); color:#9b7a1d}
+.ico[data-g="shot"]{background:var(--tint-blue); color:#5b7ab8}
+.ico[data-g="wine"]{background:var(--tint-red); color:#b35d5d}
+.ico[data-g="bottle"]{background:var(--tint-green); color:#5f8f6c}
 .drink .nm{font-size:14.5px; line-height:1.25} .drink .nm small{display:block; font-size:12px; color:var(--ink-3)}
 .stepper{display:flex; align-items:center; gap:6px}
 .stepper button{width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:var(--bg);
-  color:var(--brand); font-size:18px; line-height:1; cursor:pointer}
+  color:#5b7ab8; font-size:18px; line-height:1; cursor:pointer}
 .stepper .val{min-width:28px; text-align:center; font-weight:500; font-variant-numeric:tabular-nums}
-.go{height:48px; border:none; border-radius:3px; background:var(--ink); color:var(--bg); font-size:13.5px;
-  font-weight:600; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; padding:0 22px}
+.go{height:48px; border:1px solid var(--line); border-radius:8px; background:var(--go); color:var(--ink); font-size:15px;
+  font-weight:700; cursor:pointer; padding:0 22px}
 
 /* Wyniki w panelu - kafle gradientowe w stylu paneli Usemaps */
 .results{display:none; flex-direction:column; gap:12px}
 .results.show{display:flex}
 .resgrid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-.tonal{border-radius:3px; padding:14px; display:flex; flex-direction:column; gap:4px; color:var(--ink);
+.tonal{border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:4px; color:var(--ink);
   background:var(--surface); border:1px solid var(--line); border-top:2px solid var(--line)}
 .tonal .eyebrow{font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.12em; color:var(--ink-3)}
-.tonal .big{font-family:var(--font-d); font-size:24px; font-weight:700; line-height:1.12; font-variant-numeric:tabular-nums}
+.tonal .big{font-size:23px; font-weight:700; line-height:1.12; font-variant-numeric:tabular-nums}
 .tonal .sub{font-size:12.5px; color:var(--ink-2)}
 .t-red{border-top-color:#e5564a}
 .t-blue{border-top-color:#5b86d6}
@@ -138,8 +143,8 @@ input[type=number]{width:74px}
 .t-green{border-top-color:#4fae6b}
 /* Warstwy: wiersz z kafelkiem ikony, opisem i przełącznikiem */
 .lrow{display:grid; grid-template-columns:44px 1fr auto; gap:12px; align-items:center;
-  border:1px solid var(--line); border-radius:3px; padding:10px 12px}
-.ltile{width:44px; height:44px; border-radius:3px; display:flex; align-items:center; justify-content:center; flex:none}
+  border:1px solid var(--line); border-radius:10px; padding:10px 12px}
+.ltile{width:44px; height:44px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex:none}
 .ltile{background:var(--tile); border:1px solid var(--line)}
 .lt-red{color:#e5564a} .lt-yellow{color:#d7a21a} .lt-purple{color:#a98ae0} .lt-blue{color:#6b8fd9} .lt-green{color:#5fae74}
 .lrow .nm{font-size:14.5px; font-weight:700; line-height:1.25}
@@ -149,11 +154,11 @@ input[type=number]{width:74px}
 .switch .tr{position:absolute; inset:0; border-radius:9999px; background:var(--line); transition:background .15s}
 .switch .tr::after{content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%;
   background:var(--bg); box-shadow:0 1px 2px rgba(0,0,0,.4); transition:left .15s}
-.switch input:checked + .tr{background:var(--ink)}
+.switch input:checked + .tr{background:#8fb0e6}
 .switch input:checked + .tr::after{left:21px}
-.verdict{border:1px solid var(--line); border-radius:3px; padding:12px 14px; display:flex; gap:10px; align-items:flex-start}
+.verdict{border:1px solid var(--line); border-radius:10px; padding:12px 14px; display:flex; gap:10px; align-items:flex-start}
 .verdict .vi{font-size:20px; line-height:1.2}
-.verdict p{margin:0; font-size:14px; color:var(--ink-2)} .verdict b{font-family:var(--font-d); color:var(--ink); font-weight:600}
+.verdict p{margin:0; font-size:14px; color:var(--ink-2)} .verdict b{color:var(--ink); font-weight:700}
 
 /* Nakładki na mapie */
 .mapstatus{position:absolute; z-index:600; background:var(--bg); border:1px solid var(--line);
@@ -161,18 +166,18 @@ input[type=number]{width:74px}
   left:50%; transform:translateX(-50%); top:12px; max-width:min(92%,560px); text-align:center;
   transition:opacity .4s ease}
 .mapstatus.hide{opacity:0; pointer-events:none}
-:root:not([data-theme="light"]) .leaflet-layer,
-:root:not([data-theme="light"]) .leaflet-control-zoom,
-:root:not([data-theme="light"]) .leaflet-control-attribution{filter:invert(1) hue-rotate(180deg) brightness(.88) contrast(.92) saturate(.6)}
+:root[data-theme="dark"] .leaflet-layer,
+:root[data-theme="dark"] .leaflet-control-zoom,
+:root[data-theme="dark"] .leaflet-control-attribution{filter:invert(1) hue-rotate(180deg) brightness(.88) contrast(.92) saturate(.6)}
 .gi{width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; display:block}
 .mpin{width:30px; height:30px; border-radius:50%; background:var(--mc,#1a73e8); border:2px solid #fff;
   box-shadow:0 1px 4px rgba(32,33,36,.45); display:flex; align-items:center; justify-content:center}
 .mpin .gi{width:16px; height:16px; stroke:#fff; stroke-width:2}
 /* Nawigacja krok po kroku */
-.navbtn{height:46px; border:1px solid var(--ink); border-radius:3px; background:transparent; color:var(--ink);
-  font-size:12.5px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; padding:0 20px}
+.navbtn{height:46px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--ink);
+  font-size:14px; font-weight:600; cursor:pointer; padding:0 20px}
 .navsteps{display:flex; flex-direction:column; gap:10px; margin-top:4px}
-.navstep{display:flex; gap:12px; align-items:flex-start; border:1px solid var(--line); border-radius:3px; padding:10px 12px}
+.navstep{display:flex; gap:12px; align-items:flex-start; border:1px solid var(--line); border-radius:10px; padding:10px 12px}
 .navstep .ph{font-size:30px; line-height:1.1; flex:none; text-align:center}
 .navstep .ph small{display:block; font-size:9px; color:var(--ink-3); margin-top:2px}
 .navstep p{margin:0; font-size:14px; color:var(--ink-2)} .navstep b{color:var(--ink); font-weight:500}
@@ -758,12 +763,12 @@ function switchCity(city){
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("[data-g]").forEach(el => { el.innerHTML = gsvg(el.dataset.g); });
   document.querySelectorAll(".stepnum").forEach(el => { el.textContent = el.textContent.padStart(2, "0"); });
-  try{ if (localStorage.getItem("zm_theme") === "light") document.documentElement.setAttribute("data-theme", "light"); }catch(e){}
+  try{ if (localStorage.getItem("zm_theme") === "dark") document.documentElement.setAttribute("data-theme", "dark"); }catch(e){}
   document.getElementById("btnTheme").addEventListener("click", () => {
-    const light = document.documentElement.getAttribute("data-theme") !== "light";
-    if (light) document.documentElement.setAttribute("data-theme", "light");
+    const dark = document.documentElement.getAttribute("data-theme") !== "dark";
+    if (dark) document.documentElement.setAttribute("data-theme", "dark");
     else document.documentElement.removeAttribute("data-theme");
-    try{ localStorage.setItem("zm_theme", light ? "light" : "dark"); }catch(e){}
+    try{ localStorage.setItem("zm_theme", dark ? "dark" : "light"); }catch(e){}
   });
   initMap();
   setPoint(CITIES.poznan.center, CITIES.poznan.defaultLabel);
