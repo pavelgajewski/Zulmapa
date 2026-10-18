@@ -305,7 +305,7 @@ const OVERPASS = [
 ];
 
 const state = { city:"poznan", point:null, counts:{piwo:0,wodka:0,wino:0,pryt:0},
-  data:{police:[], cameras:[], green:[], izby:[]}, loaded:false, loadToken:0 };
+  data:{police:[], cameras:[], green:[], izby:[]}, loaded:false, loading:false, failed:false, loadStart:0, loadToken:0 };
 
 /* ===================== Logika (czyste funkcje, pokryte testami) ===================== */
 function promille(counts, weightKg, sex, hours){
@@ -388,9 +388,28 @@ function setPoint(pos, label){
 function setStatus(t){ document.getElementById("status").textContent = t; }
 function setProgress(pct, err){
   const box = document.getElementById("progress"), fill = document.getElementById("progressFill");
-  if (pct === null){ box.classList.add("idle"); box.classList.remove("err"); fill.style.width = "0%"; box.setAttribute("aria-valuenow","0"); return; }
-  box.classList.remove("idle"); box.classList.toggle("err", !!err);
-  fill.style.width = pct + "%"; box.setAttribute("aria-valuenow", String(pct));
+  if (pct === null){ box.classList.add("idle"); box.classList.remove("err"); fill.style.width = "0%"; box.setAttribute("aria-valuenow","0"); }
+  else { box.classList.remove("idle"); box.classList.toggle("err", !!err);
+    fill.style.width = pct + "%"; box.setAttribute("aria-valuenow", String(pct)); }
+  updateCalc(pct === null ? 100 : pct);
+}
+/* Blokada przycisku "Oblicz" na czas ładowania + procent i estymacja pozostałego czasu */
+function updateCalc(pct){
+  const b = document.getElementById("calc");
+  if (!b) return;
+  if (state.failed){ b.disabled = false; b.textContent = "Ponów pobieranie danych ↻"; return; }
+  if (state.loading){
+    b.disabled = true;
+    let eta = "";
+    if (pct > 5 && state.loadStart){
+      const elapsed = (Date.now() - state.loadStart) / 1000;
+      const rest = Math.max(1, Math.round(elapsed * (100 - pct) / pct));
+      eta = " · zostało ok. " + rest + " s";
+    }
+    b.textContent = "Ładowanie danych: " + Math.round(pct) + "%" + eta;
+    return;
+  }
+  b.disabled = false; b.textContent = "Oblicz trasę czołgania →";
 }
 function setNet(online){
   const n = document.getElementById("net");
@@ -441,7 +460,7 @@ function parseElements(osm, into){
 }
 async function loadCityData(){
   const token = ++state.loadToken;             // ochrona przed wyścigiem przy przełączaniu miast
-  state.loaded = false; state.loading = true; state.failed = false;
+  state.loaded = false; state.loading = true; state.failed = false; state.loadStart = Date.now();
   const cityName = CITIES[state.city].name;
   const [lat, lon] = CITIES[state.city].center;
   const ar = `(around:${FETCH_RADIUS},${lat},${lon})`;
@@ -494,9 +513,9 @@ function fmtTime(min){
 }
 function runAnalysis(){
   if (!map){ setStatus("Mapa nie działa bez biblioteki Leaflet - sprawdź połączenie i odśwież stronę."); return; }
-  if (!state.loaded){
+  if (state.loading || !state.loaded){
     if (state.failed){ setStatus("Ponawiam pobieranie danych OSM…"); loadCityData(); }
-    else setStatus("Dane jeszcze się ładują - chwila.");
+    else setStatus("Dane w trakcie ładowania - przycisk odblokuje się po zakończeniu.");
     return;
   }
   const weight = Math.min(250, Math.max(35, parseFloat(document.getElementById("weight").value) || 80));
