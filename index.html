@@ -390,6 +390,7 @@ function dangerMargin(pt, data, pRadius){
   for (const z of data.cameras) m = Math.min(m, haversine(pt, z.pos) - CAMERA_RADIUS);
   return m; // >0: poza wszystkimi strefami
 }
+const PARK_MIN_AREA = 10000, PARK_REACH = 1500;   // m², m
 const MIN_MARGIN = 40;   // m - minimalny zapas od każdej strefy zagrożenia, żeby uznać miejsce za strefę wolności
 function pickSpot(user, data, pRadius){
   if (!data.green.length) return null;
@@ -402,7 +403,10 @@ function pickSpot(user, data, pRadius){
     return { g, pt:best.pt, margin:best.margin, dist: haversine(user, best.pt) };
   });
   const safe = scored.filter(s => s.margin >= MIN_MARGIN).sort((a,b) => a.dist - b.dist);
-  if (safe.length) return {...safe[0], safe:true};
+  // Pierwszeństwo: bezpieczny park od 1 ha w zasięgu 1,5 km; dopiero potem najbliższa mniejsza kryjówka (krzak, altanka)
+  const park = safe.find(s => s.g.kind === "park" && s.g.area >= PARK_MIN_AREA && s.dist <= PARK_REACH);
+  if (park) return {...park, safe:true, tier:"park", skipped: safe[0] !== park ? safe[0] : null};
+  if (safe.length) return {...safe[0], safe:true, tier:"small"};
   scored.sort((a,b) => b.margin - a.margin);    // najmniejsza gęstość interwencji
   return {...scored[0], safe:false};
 }
@@ -553,7 +557,7 @@ function parseElements(osm, into){
     else if (t.amenity === "shelter" && (t.shelter_type === "public_transport" || t.public_transport || t.highway === "bus_stop" ||
       !["picnic_shelter","gazebo","lean_to","basic_hut","weather_shelter"].includes(t.shelter_type))) continue;  // wiaty przystankowe
     else into.green.push({pos, name: t.name || (t.amenity === "shelter" ? "Altanka" :
-      t.natural === "scrub" ? "Krzaki" : t.landuse === "cemetery" ? "Cmentarz (cisza gwarantowana)" :
+      t.natural === "shrub" ? "Duży krzak" : t.natural === "scrub" ? "Krzaki" : t.landuse === "cemetery" ? "Cmentarz (cisza gwarantowana)" :
       t.landuse === "allotments" ? "Ogródki działkowe" : "Teren zielony")});
   }
 }
@@ -605,7 +609,7 @@ async function loadLive(token){
   const [lat, lon] = CITIES[state.city].center;
   const ar = `(around:${FETCH_RADIUS},${lat},${lon})`;
   // Faza 1: mały pakiet krytyczny (szybki na wolnym łączu): posterunki, kamery, altanki
-  const qSmall = `[out:json][timeout:25];(nwr["amenity"="police"]${ar};node["man_made"="surveillance"]${ar};node["amenity"="shelter"]${ar};);out center;`;
+  const qSmall = `[out:json][timeout:25];(nwr["amenity"="police"]${ar};node["man_made"="surveillance"]${ar};node["amenity"="shelter"]${ar};node["natural"="shrub"]${ar};);out center;`;
   // Faza 2: ciężka warstwa zieleni (parki, krzaki, lasy, łąki, cmentarze, działki)
   const qGreen = `[out:json][timeout:25];(way["leisure"="park"]${ar};way["natural"~"^(scrub|wood)$"]${ar};way["landuse"~"^(forest|meadow|cemetery|allotments)$"]${ar};);out center;`;
   const data = {police:[], cameras:[], green:[], izby:[]};
@@ -709,7 +713,7 @@ function runAnalysis(){
       mk.bindPopup("✅ <b>Strefa wolności: " + spotName(spot.g) + "</b><br>Jesteś poza zasięgiem posterunków (dojazd: " + pRad + " m), kamer i izby (680 m).").openPopup();
       document.getElementById("rIcon").textContent = "🏕️";
       document.getElementById("rVerdict").innerHTML = "<b>Strefa wolności: " + spotName(spot.g) + ".</b> Margines od najbliższej strefy zagrożenia: " +
-        fmtDist(spot.margin) + ". Dłuższa trasa, spokojniejszy sen." + (p >= 2 ? " Lepiej kieruj się nisko przy gruncie." : "");
+        fmtDist(spot.margin) + "." + (spot.skipped ? " Park zamiast najbliższej kryjówki (" + spotName(spot.skipped.g) + ", " + fmtDist(spot.skipped.dist) + "): dłuższa trasa, spokojniejszy sen." : " Dłuższa trasa, spokojniejszy sen.") + (p >= 2 ? " Lepiej kieruj się nisko przy gruncie." : "");
     } else {
       mk.bindPopup("🌿 <b>" + spotName(spot.g) + "</b><br>Najniższa gęstość interwencji w zasięgu danych. Śpij czujnie.").openPopup();
       document.getElementById("rIcon").textContent = "🌙";

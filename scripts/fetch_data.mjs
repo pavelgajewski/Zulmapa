@@ -168,8 +168,10 @@ function parseSmall(osm, into, stats) {
       stats.shrubs++;
       into.green.push({ pos: p, pts: [p], name: t.name || "Duży krzak", kind: "shrub", area: 0 });
     } else if (t.amenity === "shelter") {
-      if (isTransitShelter(t) || !SHELTER_OK.has(t.shelter_type)) { stats.shelter_skipped++; continue; }
-      into.green.push({ pos: p, pts: [p], name: t.name || "Altanka", kind: "shelter", area: 0 });
+      if (isTransitShelter(t)) { stats.shelter_skipped++; continue; }                       // wiata przystankowa
+      const item = { pos: p, pts: [p], name: t.name || "Altanka", kind: "shelter", area: 0 };
+      if (SHELTER_OK.has(t.shelter_type)) into.green.push(item);
+      else into.pendingShelters.push(item);              // bez typu: przyjęta tylko, jeśli stoi w parku/lesie/krzakach
     }
   }
 }
@@ -181,8 +183,9 @@ function kindOf(t) {
   if (t.landuse && KINDS[t.landuse]) return t.landuse;
   return null;
 }
+const SHELTER_HOSTS = new Set(["park", "garden", "wood", "forest", "scrub", "cemetery", "allotments", "meadow"]);
 function parseGreen(osm, into, lat0, stats) {
-  const T = toXY(lat0);
+  const T = toXY(lat0), hosts = [];
   for (const el of osm.elements || []) {
     const t = el.tags || {};
     const kind = kindOf(t);
@@ -203,7 +206,15 @@ function parseGreen(osm, into, lat0, stats) {
     if (!ip.length) { stats.no_interior++; continue; }
     const pts = ip.map(c => { const ll = T.inv(c.p); return [r5(ll[0]), r5(ll[1])]; });
     into.green.push({ pos: pts[0], pts, name: t.name || KINDS[kind].label, kind, area: Math.round(area) });
+    if (SHELTER_HOSTS.has(kind)) hosts.push(rings);
   }
+  // altanki bez typu: przyjmowane tylko wewnątrz terenu zielonego (w zieleni = altanka, przy ulicy = wiata)
+  for (const sh of into.pendingShelters) {
+    const q = T.fwd(sh.pos);
+    if (hosts.some(rings => rings.some(r => pointInRing(q, r)))) { into.green.push(sh); stats.shelters_in_green++; }
+    else stats.shelter_skipped++;
+  }
+  delete into.pendingShelters;
 }
 
 async function geocodeIzby(cityKey) {
@@ -229,8 +240,8 @@ async function buildCity(cityKey) {
   const qGreen = `[out:json][timeout:150];(` +
     sel(`["leisure"~"^(park|garden)$"]`) + sel(`["natural"~"^(scrub|wood)$"]`) +
     sel(`["landuse"~"^(forest|meadow|grass|village_green|cemetery|allotments)$"]`) + `);out geom;`;
-  const stats = { cam_indoor: 0, shelter_skipped: 0, shrubs: 0, no_geom: 0, too_small: 0, no_interior: 0 };
-  const data = { schema: 1, version: 2, city: cityKey, generated_at: new Date().toISOString(), police: [], cameras: [], green: [], izby: [] };
+  const stats = { cam_indoor: 0, shelter_skipped: 0, shelters_in_green: 0, shrubs: 0, no_geom: 0, too_small: 0, no_interior: 0 };
+  const data = { schema: 1, version: 2, city: cityKey, generated_at: new Date().toISOString(), police: [], cameras: [], green: [], izby: [], pendingShelters: [] };
   parseSmall(await overpass(qSmall), data, stats);
   await sleep(1500); // polityka Overpass: bez równoległości, przerwa między zapytaniami
   parseGreen(await overpass(qGreen), data, lat, stats);
