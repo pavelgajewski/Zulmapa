@@ -511,9 +511,50 @@ function parseElements(osm, into){
       t.landuse === "allotments" ? "Ogródki działkowe" : "Teren zielony")});
   }
 }
+function applyData(d, token){
+  if (token !== state.loadToken) return;
+  state.data = {police:d.police||[], cameras:d.cameras||[], green:d.green||[], izby:d.izby||[]};
+  state.loaded = true;
+  if (map) drawBase();
+}
+/* Warstwy danych: 1) pamięć przeglądarki (start natychmiast) -> 2) paczka statyczna data/<miasto>.json
+   z repo (odświeżana co tydzień przez GitHub Actions) -> 3) fallback: Overpass na żywo */
 async function loadCityData(){
-  const token = ++state.loadToken;             // ochrona przed wyścigiem przy przełączaniu miast
+  const token = ++state.loadToken;
   state.loaded = false; state.loading = true; state.failed = false; state.loadStart = Date.now();
+  const city = state.city, cityName = CITIES[city].name;
+  startTicker();
+  let fromCache = false;
+  try{
+    const c = JSON.parse(localStorage.getItem("zm_data_" + city));
+    if (c && c.schema === 1){
+      applyData(c, token); fromCache = true;
+      setStatus(cityName + " - dane z pamięci (stan na: " + String(c.generated_at||"").slice(0,10) + "), odświeżam w tle…");
+    }
+  } catch(e){}
+  try{
+    setProgress(10, false, 85);
+    if (!fromCache) setStatus("Pobieram paczkę danych: " + cityName + "…");
+    const res = await fetch("data/" + city + ".json", {cache:"no-store"});
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const d = await res.json();
+    if (token !== state.loadToken) return;
+    if (!d || d.schema !== 1) throw new Error("zły format paczki");
+    applyData(d, token);
+    try{ localStorage.setItem("zm_data_" + city, JSON.stringify(d)); }catch(e){}
+    state.loading = false;
+    try{ localStorage.setItem("zm_load_ms", String(Date.now() - state.loadStart)); }catch(e){}
+    setProgress(100);
+    setStatus(cityName + " - stan danych: " + String(d.generated_at||"").slice(0,10) + " · posterunki: " + d.police.length +
+      ", kamery: " + d.cameras.length + ", tereny zielone: " + d.green.length + ", izby: " + d.izby.length + ".");
+    setTimeout(() => { if (token === state.loadToken) setProgress(null); }, 900);
+  } catch(e){
+    if (token !== state.loadToken) return;
+    if (fromCache){ state.loading = false; setProgress(null); return; }   // kopia z pamięci wystarczy
+    await loadLive(token);                                                // fallback: Overpass na żywo
+  }
+}
+async function loadLive(token){
   const cityName = CITIES[state.city].name;
   const [lat, lon] = CITIES[state.city].center;
   const ar = `(around:${FETCH_RADIUS},${lat},${lon})`;
@@ -522,7 +563,6 @@ async function loadCityData(){
   // Faza 2: ciężka warstwa zieleni (parki, krzaki, lasy, łąki, cmentarze, działki)
   const qGreen = `[out:json][timeout:25];(way["leisure"~"^(park|garden)$"]${ar};way["natural"~"^(scrub|wood)$"]${ar};way["landuse"~"^(forest|meadow|grass|village_green|cemetery|allotments)$"]${ar};);out center;`;
   const data = {police:[], cameras:[], green:[], izby:[]};
-  startTicker();
   try{
     setProgress(5, false, 42);
     setStatus("Etap 1/3 - posterunki i kamery (" + cityName + ")…");
@@ -540,6 +580,8 @@ async function loadCityData(){
     if (token !== state.loadToken) return;
     state.loading = false;
     try{ localStorage.setItem("zm_load_ms", String(Date.now() - state.loadStart)); } catch(e){}
+    try{ localStorage.setItem("zm_data_" + state.city, JSON.stringify({schema:1, city:state.city,
+      generated_at:new Date().toISOString(), police:data.police, cameras:data.cameras, green:data.green, izby:data.izby})); }catch(e){}
     setProgress(100);
     setStatus(cityName + " - posterunki: " + data.police.length + ", kamery: " + data.cameras.length +
       ", tereny zielone: " + data.green.length + ", izby wytrzeźwień: " + data.izby.length + ".");

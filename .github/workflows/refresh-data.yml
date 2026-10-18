@@ -1,0 +1,32 @@
+name: Odśwież dane OSM
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/**"
+      - ".github/workflows/refresh-data.yml"
+  schedule:
+    - cron: "23 4 * * 1"   # poniedziałek 04:23 UTC, co tydzień
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pobierz dane z Overpass i Nominatim
+        run: node scripts/fetch_data.mjs
+      - name: Commit paczek danych (tylko gdy coś się zmieniło)
+        run: |
+          git config user.name "zulmapa-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data
+          git diff --cached --quiet && echo "Bez zmian w danych" || { git commit -m "data: odświeżenie paczek OSM [skip ci]"; git push; }
