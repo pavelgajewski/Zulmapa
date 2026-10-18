@@ -83,26 +83,26 @@ a{color:var(--brand); text-decoration:none} a:hover{text-decoration:underline}
     border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow)}
   .mapstatus{left:auto; right:64px; transform:none; max-width:38%}
 }
-/* Telefon: mapa na cały ekran, panel jako wysuwany bottom sheet - mapę widać cały czas */
+/* Telefon: mapa na cały ekran, panel jako boczna szuflada z lewej */
+.drawerbtn{display:none}
 @media (max-width:860px){
-  .main{display:block}
-  .mapwrap{position:absolute; inset:0}
-  .panel{position:absolute; left:0; right:0; bottom:0; z-index:700; max-height:56%;
-    border-right:none; border-top:1px solid var(--line); border-radius:16px 16px 0 0;
-    box-shadow:0 -2px 12px rgba(32,33,36,.25); gap:14px; padding-top:0;
-    padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px));
-    padding-bottom:max(20px, env(safe-area-inset-bottom,0px)); transition:max-height .25s ease}
-  .panel.min{max-height:62px; overflow:hidden}
-  /* Legenda nad sheetem: na telefonie dół mapy jest zasłonięty, więc przycisk idzie pod zoom */
-  .legbtn{bottom:auto; top:158px}
-  .legend{bottom:auto; top:212px}
-  .handle{display:flex; position:sticky; top:0; z-index:1; margin:0 -16px 2px; padding:8px 16px 10px;
-    background:var(--bg); border:none; border-radius:16px 16px 0 0; cursor:pointer; width:calc(100% + 32px);
-    flex-direction:column; align-items:center; gap:7px; color:var(--ink-2); font-size:13.5px; font-weight:500}
-  .handle::before{content:""; width:36px; height:4px; border-radius:2px; background:var(--line)}
+  .panel{left:0; top:0; bottom:0; width:min(86vw,360px);
+    border-right:1px solid var(--line); border-radius:0 16px 16px 0;
+    box-shadow:2px 0 12px rgba(32,33,36,.25); gap:14px; padding-top:56px;
+    padding-left:max(16px, env(safe-area-inset-left,0px));
+    padding-bottom:max(20px, env(safe-area-inset-bottom,0px));
+    transition:transform .25s ease}
+  .panel.min{transform:translateX(-102%)}
+  .drawerbtn{display:flex; align-items:center; justify-content:center; position:absolute; z-index:750;
+    left:max(10px, env(safe-area-inset-left,0px)); top:10px; width:44px; height:44px; border-radius:50%;
+    background:var(--bg); border:1px solid var(--line); box-shadow:var(--shadow); font-size:19px;
+    cursor:pointer; color:var(--ink-2)}
+  .legbtn{bottom:auto; top:10px}
+  .legend{bottom:auto; top:64px}
   .seg button{padding:0 14px}
   .logo .word{display:none}
   .net .lbl{display:none}
+  .mapstatus{top:62px}
 }
 
 /* Panel - kroki */
@@ -266,7 +266,8 @@ dialog .close{float:right; margin-top:4px}
     <div class="mapwrap">
       <div id="map" role="application" aria-label="Mapa"></div>
       <div class="mapstatus" id="status" role="status">Ładowanie danych z OpenStreetMap…</div>
-      <button class="legbtn" id="legBtn" aria-label="Legenda" aria-expanded="false">☰</button>
+      <button class="drawerbtn" id="drawerBtn" aria-label="Panel danych" aria-expanded="true">✕</button>
+      <button class="legbtn" id="legBtn" aria-label="Legenda" aria-expanded="false">🗺</button>
       <div class="legend" id="legend">
         <span><span class="dot" style="background:#ea4335"></span>Posterunek + zasięg dojazdu</span>
         <span><span class="dot" style="background:#f9ab00"></span>Kamera monitoringu</span>
@@ -392,7 +393,7 @@ function initMap(){
   if (!HAS_L){ setStatus("Nie udało się wczytać biblioteki mapy (Leaflet, CDN unpkg). Sprawdź połączenie z internetem i odśwież stronę."); return; }
   baseMarkers = L.layerGroup(); routeLayer = L.layerGroup();
   map = L.map("map", {zoomControl:false}).setView(CITIES[state.city].center, 14);
-  L.control.zoom({position:"topright"}).addTo(map);
+  if (!isSheet()) L.control.zoom({position:"topright"}).addTo(map);   // na dotyku zoom szczypaniem, bez ikon
   const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">autorzy OpenStreetMap</a>'
   }).addTo(map);
@@ -622,10 +623,8 @@ function runAnalysis(){
       document.getElementById("rVerdict").innerHTML = "<b>Pełnej strefy wolności brak</b> - każdy teren zielony w promieniu 3 km leży w czyimś zasięgu. " +
         "Miejsce o najmniejszej gęstości interwencji: <b>" + spot.g.name + "</b> (niedobór marginesu: " + fmtDist(Math.abs(spot.margin)) + "). Krzaki, park, odludzie - i cicho.";
     }
-    const sheet = isSheet();
-    const panelH = sheet ? document.getElementById("panel").getBoundingClientRect().height : 0;
-    map.fitBounds(L.latLngBounds([user, spot.g.pos]).pad(0.25),
-      {paddingTopLeft:[10, 48], paddingBottomRight:[10, 10 + panelH]});   // trasa widoczna nad bottom sheetem
+    if (isSheet()){ setSheet(true); setStatus("Trasa na mapie - wyniki i nawigacja w panelu ☰"); }  // szuflada zjeżdża, widać całą trasę
+    map.fitBounds(L.latLngBounds([user, spot.g.pos]).pad(0.25), {paddingTopLeft:[14, 64], paddingBottomRight:[14, 20]});
   }
   document.getElementById("results").classList.add("show");
   document.getElementById("results").scrollIntoView({behavior:"smooth", block:"nearest"});
@@ -662,9 +661,10 @@ function buildNav(){
 function isSheet(){ return window.matchMedia("(max-width:860px)").matches; }
 function setSheet(min){
   if (!isSheet()) return;
-  const p = document.getElementById("panel");
-  p.classList.toggle("min", min);
-  document.getElementById("handle").setAttribute("aria-expanded", String(!min));
+  document.getElementById("panel").classList.toggle("min", min);
+  const b = document.getElementById("drawerBtn");
+  b.textContent = min ? "☰" : "✕";
+  b.setAttribute("aria-expanded", String(!min));
 }
 
 /* ===================== UI ===================== */
@@ -692,7 +692,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }));
   document.getElementById("calc").addEventListener("click", runAnalysis);
   document.getElementById("status").addEventListener("click", () => { if (state.failed) loadCityData(); });
-  document.getElementById("handle").addEventListener("click", () => setSheet(!document.getElementById("panel").classList.contains("min")));
+  document.getElementById("drawerBtn").addEventListener("click", () => setSheet(!document.getElementById("panel").classList.contains("min")));
   document.getElementById("navBtn").addEventListener("click", buildNav);
   const legBtn = document.getElementById("legBtn"), legend = document.getElementById("legend");
   legBtn.addEventListener("click", () => {
