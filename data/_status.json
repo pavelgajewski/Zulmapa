@@ -1,0 +1,21 @@
+{
+ "generated_at": "2026-10-18T10:07:01.860Z",
+ "results": {
+  "poznan": "ok: posterunki 11, kamery 181, zieleń 12161, izby 1",
+  "lublin": "ok: posterunki 15, kamery 22, zieleń 7233, izby 1"
+ },
+ "mirror_errors": [
+  "overpass.private.coffee (próba 1): HTTP 500",
+  "overpass.private.coffee (próba 2): HTTP 500",
+  "maps.mail.ru (próba 1): HTTP 504",
+  "overpass.private.coffee (próba 1): HTTP 500",
+  "overpass.private.coffee (próba 2): HTTP 500",
+  "maps.mail.ru (próba 1): HTTP 504",
+  "overpass.private.coffee (próba 1): HTTP 500",
+  "overpass.private.coffee (próba 2): HTTP 500",
+  "maps.mail.ru (próba 1): HTTP 504",
+  "maps.mail.ru (próba 2): HTTP 504",
+  "overpass.private.coffee (próba 1): HTTP 500",
+  "overpass.private.coffee (próba 2): HTTP 500"
+ ]
+}
