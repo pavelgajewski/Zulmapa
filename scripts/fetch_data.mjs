@@ -4,11 +4,13 @@ import { writeFile, mkdir } from "node:fs/promises";
 
 const UA = "ZulMapa-data/1.0 (+https://github.com/pavelgajewski/zulmapa)";
 const FETCH_RADIUS = 3000; // metry wokół centrum miasta
+// Kolejność pod runnery GitHub (Azure): FOSSGIS często tnie limitami współdzielone IP chmur
 const OVERPASS = [
-  "https://overpass-api.de/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
   "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
-  "https://overpass.private.coffee/api/interpreter"
+  "https://overpass-api.de/api/interpreter"
 ];
+const mirrorErrors = [];
 const CITIES = {
   poznan: {
     name: "Poznań", center: [52.40816, 16.93425],
@@ -28,19 +30,28 @@ const r5 = (x) => Math.round(x * 1e5) / 1e5;
 async function overpass(query) {
   let lastErr;
   for (const url of OVERPASS) {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 90000);
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        body: "data=" + encodeURIComponent(query),
-        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": UA },
-        signal: ctrl.signal
-      });
-      clearTimeout(t);
-      if (!res.ok) throw new Error("HTTP " + res.status + " (" + new URL(url).hostname + ")");
-      return await res.json();
-    } catch (e) { clearTimeout(t); lastErr = e; console.warn("Mirror padł:", String(e)); await sleep(2000); }
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 90000);
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          body: "data=" + encodeURIComponent(query),
+          headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": UA },
+          signal: ctrl.signal
+        });
+        clearTimeout(t);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return await res.json();
+      } catch (e) {
+        clearTimeout(t);
+        lastErr = e;
+        const msg = new URL(url).hostname + " (próba " + attempt + "): " + (e && e.name === "AbortError" ? "timeout 90 s" : String(e && e.message || e));
+        mirrorErrors.push(msg);
+        console.warn("Mirror padł:", msg);
+        await sleep(attempt * 3000);
+      }
+    }
   }
   throw lastErr;
 }
@@ -90,12 +101,23 @@ async function buildCity(cityKey) {
 }
 
 await mkdir("data", { recursive: true });
+const status = { generated_at: new Date().toISOString(), results: {}, mirror_errors: [] };
 for (const cityKey of Object.keys(CITIES)) {
   console.log("Pobieram:", cityKey);
-  const data = await buildCity(cityKey);
-  await writeFile("data/" + cityKey + ".json", JSON.stringify(data));
-  console.log(cityKey, "- posterunki:", data.police.length, "kamery:", data.cameras.length,
-    "zieleń:", data.green.length, "izby:", data.izby.length);
+  try {
+    const data = await buildCity(cityKey);
+    await writeFile("data/" + cityKey + ".json", JSON.stringify(data));
+    status.results[cityKey] = "ok: posterunki " + data.police.length + ", kamery " + data.cameras.length +
+      ", zieleń " + data.green.length + ", izby " + data.izby.length;
+    console.log(cityKey, "-", status.results[cityKey]);
+  } catch (e) {
+    status.results[cityKey] = "błąd: " + String(e && e.message || e);
+    console.error(cityKey, "-", status.results[cityKey]);
+  }
   await sleep(1500);
 }
-console.log("Gotowe.");
+status.mirror_errors = mirrorErrors;
+await writeFile("data/_status.json", JSON.stringify(status, null, 1));
+// Zawsze kod wyjścia 0: brak danych nie psuje apki (fallback na Overpass na żywo),
+// a commit _status.json pozwala zdiagnozować przyczynę bez dostępu do logów Actions.
+console.log("Status:", JSON.stringify(status.results));
