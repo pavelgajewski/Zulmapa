@@ -71,12 +71,18 @@ a{color:var(--brand); text-decoration:none} a:hover{text-decoration:underline}
 .progress.idle{visibility:hidden}
 
 /* Układ: panel + mapa */
-.main{flex:1; min-height:0; display:grid; grid-template-columns:380px 1fr; position:relative}
-.panel{min-height:0; overflow-y:auto; border-right:1px solid var(--line); background:var(--bg);
-  padding:16px max(16px, env(safe-area-inset-left,0px)) 24px 16px; display:flex; flex-direction:column; gap:18px}
-.handle{display:none}
-.mapwrap{position:relative; min-height:0}
+.main{flex:1; min-height:0; position:relative}
+.mapwrap{position:absolute; inset:0}
 #map{height:100%; width:100%; background:var(--surface)}
+.panel{position:absolute; z-index:700; overflow-y:auto; background:var(--bg);
+  padding:16px 16px 24px; display:flex; flex-direction:column; gap:18px}
+.handle{display:none}
+/* Desktop: mapa na cały ekran, panel jako pływająca karta */
+@media (min-width:861px){
+  .panel{left:max(12px, env(safe-area-inset-left,0px)); top:12px; bottom:12px; width:384px;
+    border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow)}
+  .mapstatus{left:auto; right:64px; transform:none; max-width:38%}
+}
 /* Telefon: mapa na cały ekran, panel jako wysuwany bottom sheet - mapę widać cały czas */
 @media (max-width:860px){
   .main{display:block}
@@ -137,13 +143,18 @@ input[type=number]{width:74px}
 /* Nakładki na mapie */
 .mapstatus{position:absolute; z-index:600; background:var(--bg); border:1px solid var(--line);
   border-radius:9999px; padding:7px 14px; font-size:13px; color:var(--ink-2); box-shadow:var(--shadow);
-  left:50%; transform:translateX(-50%); top:12px; max-width:min(92%,560px); text-align:center}
-.legend{position:absolute; z-index:600; right:max(12px, env(safe-area-inset-right,0px)); bottom:24px;
+  left:50%; transform:translateX(-50%); top:12px; max-width:min(92%,560px); text-align:center;
+  transition:opacity .4s ease}
+.mapstatus.hide{opacity:0; pointer-events:none}
+.legbtn{position:absolute; z-index:600; right:max(12px, env(safe-area-inset-right,0px)); bottom:44px;
+  width:44px; height:44px; border-radius:50%; background:var(--bg); border:1px solid var(--line);
+  box-shadow:var(--shadow); font-size:19px; cursor:pointer; color:var(--ink-2)}
+.legend{position:absolute; z-index:600; right:max(12px, env(safe-area-inset-right,0px)); bottom:96px;
   background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:12.5px;
-  color:var(--ink-2); box-shadow:var(--shadow); display:flex; flex-direction:column; gap:6px}
+  color:var(--ink-2); box-shadow:var(--shadow); display:none; flex-direction:column; gap:6px}
+.legend.show{display:flex}
 .legend span{display:inline-flex; align-items:center; gap:7px}
 .dot{width:10px; height:10px; border-radius:50%; display:inline-block; flex:none}
-@media (max-width:860px){ .legend{display:none} }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]) .leaflet-layer,
   :root:not([data-theme="light"]) .leaflet-control-zoom,
@@ -151,7 +162,16 @@ input[type=number]{width:74px}
 }
 :root[data-theme="dark"] .leaflet-layer, :root[data-theme="dark"] .leaflet-control-zoom,
 :root[data-theme="dark"] .leaflet-control-attribution{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9)}
-.pinemoji{font-size:22px; line-height:1; filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
+.pinemoji{font-size:30px; line-height:1; filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+/* Nawigacja krok po kroku */
+.navbtn{height:48px; border:1px solid var(--line); border-radius:9999px; background:var(--bg); color:var(--brand);
+  font-size:15px; font-weight:500; cursor:pointer; padding:0 22px}
+.navsteps{display:flex; flex-direction:column; gap:10px; margin-top:4px}
+.navstep{display:flex; gap:12px; align-items:flex-start; border:1px solid var(--line); border-radius:8px; padding:10px 12px}
+.navstep .ph{font-size:30px; line-height:1.1; flex:none; text-align:center}
+.navstep .ph small{display:block; font-size:9px; color:var(--ink-3); margin-top:2px}
+.navstep p{margin:0; font-size:14px; color:var(--ink-2)} .navstep b{color:var(--ink); font-weight:500}
+.navnote{font-size:12.5px; color:var(--ink-3)}
 
 /* Okno „i" */
 dialog{border:none; border-radius:12px; background:var(--bg); color:var(--ink); max-width:520px; width:calc(100% - 32px);
@@ -235,13 +255,16 @@ dialog .close{float:right; margin-top:4px}
           <div class="tonal t-green"><div class="eyebrow">Szacowany czas</div><div class="big" id="rTime">–</div><div class="sub" id="rEta">–</div></div>
         </div>
         <div class="verdict"><div class="vi" id="rIcon">🌙</div><p id="rVerdict">–</p></div>
+        <button class="navbtn" id="navBtn" hidden>🧭 Nawiguj do strefy wolności</button>
+        <div class="navsteps" id="navBox" hidden></div>
       </div>
     </aside>
 
     <div class="mapwrap">
       <div id="map" role="application" aria-label="Mapa"></div>
       <div class="mapstatus" id="status" role="status">Ładowanie danych z OpenStreetMap…</div>
-      <div class="legend">
+      <button class="legbtn" id="legBtn" aria-label="Legenda" aria-expanded="false">☰</button>
+      <div class="legend" id="legend">
         <span><span class="dot" style="background:#ea4335"></span>Posterunek + zasięg dojazdu</span>
         <span><span class="dot" style="background:#f9ab00"></span>Kamera monitoringu</span>
         <span><span class="dot" style="background:#a142f4"></span>Izba wytrzeźwień (680 m)</span>
@@ -387,7 +410,15 @@ function setPoint(pos, label){
 }
 
 /* ===================== Pobieranie danych ===================== */
-function setStatus(t){ document.getElementById("status").textContent = t; }
+let statusTimer = null;
+function setStatus(t){
+  const chip = document.getElementById("status");
+  chip.textContent = t;
+  chip.classList.remove("hide");
+  clearTimeout(statusTimer);
+  // Po udanym załadowaniu napis znika sam, żeby nie zasłaniał mapy
+  if (!state.loading && !state.failed) statusTimer = setTimeout(() => chip.classList.add("hide"), 4000);
+}
 function renderProgress(err){
   const box = document.getElementById("progress"), fill = document.getElementById("progressFill");
   box.classList.remove("idle"); box.classList.toggle("err", !!err);
@@ -520,7 +551,7 @@ async function loadCityData(){
 function drawBase(){
   baseMarkers.clearLayers();
   for (const p of state.data.police) L.marker(p.pos, {icon: emojiIcon("🚓"), title:p.name}).bindPopup("👮 " + p.name).addTo(baseMarkers);
-  for (const cm of state.data.cameras) L.circleMarker(cm.pos, {radius:3, color:"#f9ab00", fillColor:"#f9ab00", fillOpacity:.9, weight:1}).addTo(baseMarkers);
+  for (const cm of state.data.cameras) L.circleMarker(cm.pos, {radius:5.5, color:"#b06000", fillColor:"#f9ab00", fillOpacity:.95, weight:1.5}).addTo(baseMarkers);
   for (const iz of state.data.izby) L.marker(iz.pos, {icon: emojiIcon("🏚️"), title:iz.name}).bindPopup("🛏️ <b>" + iz.name + "</b><br>" + iz.addr).addTo(baseMarkers);
 }
 
@@ -553,6 +584,9 @@ function runAnalysis(){
 
   const user = state.point;
   const spot = pickSpot(user, state.data, pRad);
+  state.lastResult = spot ? {user, spot, mv, p, pRad} : null;
+  document.getElementById("navBtn").hidden = !spot;
+  document.getElementById("navBox").hidden = true;
   document.getElementById("rPromile").textContent = p.toFixed(2).replace(".", ",") + " ‰";
   document.getElementById("rStan").textContent = stan.label;
   document.getElementById("rMode").textContent = mv.icon + " " + mv.mode;
@@ -593,6 +627,35 @@ function runAnalysis(){
   document.getElementById("results").classList.add("show");
   document.getElementById("results").scrollIntoView({behavior:"smooth", block:"nearest"});
 }
+/* Nawigacja: instrukcja krok po kroku ze zdjęciami poglądowymi (fot. Instytut) */
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function buildNav(){
+  const r = state.lastResult;
+  if (!r) return;
+  const half = r.spot.dist / 2;
+  const halfTime = fmtTime((half/1000) / r.mv.kmh * 60);
+  const dir = bearingName(r.user, r.spot.g.pos);
+  const pose = r.mv.mode === "Czołgiem"
+    ? "pozycja niska, łokcie szeroko, broda przy gruncie"
+    : "marsz kontrolowany, wzrok na horyzont, ręce z kieszeni";
+  const gmaps = "https://www.google.com/maps/dir/?api=1&origin=" + r.user[0] + "," + r.user[1] +
+    "&destination=" + r.spot.g.pos[0] + "," + r.spot.g.pos[1] + "&travelmode=walking";
+  const steps = [
+    {ph:"🧍", txt:"<b>Krok 1 - pozycja wyjściowa.</b> Stan: " + r.p.toFixed(2).replace(".", ",") + " ‰, tryb: " + r.mv.mode.toLowerCase() + " (" + pose + ")."},
+    {ph:"🧭", txt:"<b>Krok 2 - odcinek 1.</b> Kieruj się na " + esc(dir) + ": dystans " + fmtDist(half) + ", czas ok. " + halfTime + ". Omijaj strefy czerwone szerokim łukiem."},
+    {ph:"🤮", txt:"<b>Krok 3 - punkt kontrolny.</b> Zalecenie Instytutu: zzygaj się po drodze. Odciąża żołądek, obniża środek ciężkości, poprawia aerodynamikę czołgania."},
+    {ph:"🌿", txt:"<b>Krok 4 - odcinek 2.</b> Dystans " + fmtDist(half) + ", czas ok. " + halfTime + ". Po wejściu w zieleń: cisza, telefon na wibracje, zero śpiewania."},
+    {ph:"🛌", txt:"<b>Krok 5 - meta: " + esc(r.spot.g.name) + ".</b> Śpij na boku, nogi pod krzakiem, buty pod głowę. Pobudka przed świtem - patrole też śpią, ale krócej."}
+  ];
+  const box = document.getElementById("navBox");
+  box.innerHTML = steps.map(s =>
+    '<div class="navstep"><div class="ph">' + s.ph + "<small>fot. IDzD</small></div><p>" + s.txt + "</p></div>"
+  ).join("") +
+  '<a class="navbtn" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="' + gmaps + '" target="_blank" rel="noopener">Otwórz nawigację w Google Maps ↗</a>' +
+  '<p class="navnote">Model 3D terenu: w przygotowaniu - budżet Instytutu poszedł na materiał badawczy.</p>';
+  box.hidden = false;
+  box.scrollIntoView({behavior:"smooth", block:"nearest"});
+}
 function isSheet(){ return window.matchMedia("(max-width:860px)").matches; }
 function setSheet(min){
   if (!isSheet()) return;
@@ -627,7 +690,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("calc").addEventListener("click", runAnalysis);
   document.getElementById("status").addEventListener("click", () => { if (state.failed) loadCityData(); });
   document.getElementById("handle").addEventListener("click", () => setSheet(!document.getElementById("panel").classList.contains("min")));
-  map && map.on("click", () => setSheet(true));          // dotknięcie mapy zwija panel - widać cały obraz
+  document.getElementById("navBtn").addEventListener("click", buildNav);
+  const legBtn = document.getElementById("legBtn"), legend = document.getElementById("legend");
+  legBtn.addEventListener("click", () => {
+    const on = legend.classList.toggle("show");
+    legBtn.setAttribute("aria-expanded", String(on));
+  });
   setNet(navigator.onLine !== false);
   window.addEventListener("online",  () => { setNet(true); if (!state.loaded) loadCityData(); });
   window.addEventListener("offline", () => setNet(false));
