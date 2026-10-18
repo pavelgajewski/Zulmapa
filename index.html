@@ -109,16 +109,18 @@ a{color:var(--brand); text-decoration:none} a:hover{text-decoration:underline}
 .stepnum{width:24px; height:24px; border-radius:50%; background:var(--brand-tonal); color:var(--brand);
   display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex:none}
 .hint{font-size:13px; color:var(--ink-3); margin:0}
-.point{display:flex; gap:8px; align-items:center; font-size:14px; color:var(--ink-2);
+.point{display:flex; gap:10px; align-items:center; color:var(--ink-2); font-size:14px; color:var(--ink-2);
   background:var(--surface); border-radius:12px; padding:9px 12px}
 .fieldrow{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .fieldrow label{font-size:13.5px; color:var(--ink-2)}
 input[type=number], select{height:40px; border:1px solid var(--line); border-radius:4px; background:var(--bg);
   color:var(--ink); font-size:15px; padding:0 10px; font-family:inherit}
 input[type=number]{width:74px}
-.drink{display:grid; grid-template-columns:32px 1fr auto; align-items:center; gap:10px;
+.drink{display:grid; grid-template-columns:40px 1fr auto; align-items:center; gap:10px;
   border:1px solid var(--line); border-radius:14px; padding:8px 10px}
-.drink .ico{font-size:21px; text-align:center}
+.drink .ico{width:40px; height:40px; border-radius:10px; background:var(--surface); color:var(--ink-2);
+  display:flex; align-items:center; justify-content:center}
+.drink .ico .gi{width:22px; height:22px}
 .drink .nm{font-size:14.5px; line-height:1.25} .drink .nm small{display:block; font-size:12px; color:var(--ink-3)}
 .stepper{display:flex; align-items:center; gap:6px}
 .stepper button{width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:var(--bg);
@@ -142,9 +144,10 @@ input[type=number]{width:74px}
 /* Warstwy: wiersz z kafelkiem ikony, opisem i przełącznikiem */
 .lrow{display:grid; grid-template-columns:44px 1fr auto; gap:12px; align-items:center;
   border:1px solid var(--line); border-radius:16px; padding:10px 12px}
-.ltile{width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; flex:none}
-.lt-red{background:var(--tint-red)} .lt-yellow{background:var(--tint-yellow)} .lt-purple{background:var(--tint-purple)}
-.lt-blue{background:var(--tint-blue)} .lt-green{background:var(--tint-green)}
+.ltile{width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex:none}
+.lt-red{background:var(--tint-red); color:#d93025} .lt-yellow{background:var(--tint-yellow); color:#b06000}
+.lt-purple{background:var(--tint-purple); color:#8430ce} .lt-blue{background:var(--tint-blue); color:#1a73e8}
+.lt-green{background:var(--tint-green); color:#188038}
 .lrow .nm{font-size:14.5px; font-weight:700; line-height:1.25}
 .lrow .nm small{display:block; font-size:12px; font-weight:400; color:var(--ink-3); margin-top:1px}
 .switch{position:relative; width:46px; height:28px; flex:none}
@@ -171,7 +174,10 @@ input[type=number]{width:74px}
 }
 :root[data-theme="dark"] .leaflet-layer, :root[data-theme="dark"] .leaflet-control-zoom,
 :root[data-theme="dark"] .leaflet-control-attribution{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9)}
-.pinemoji{font-size:30px; line-height:1; filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+.gi{width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; display:block}
+.mpin{width:30px; height:30px; border-radius:50%; background:var(--mc,#1a73e8); border:2px solid #fff;
+  box-shadow:0 1px 4px rgba(32,33,36,.45); display:flex; align-items:center; justify-content:center}
+.mpin .gi{width:16px; height:16px; stroke:#fff; stroke-width:2}
 /* Nawigacja krok po kroku */
 .navbtn{height:48px; border:1px solid var(--line); border-radius:9999px; background:var(--bg); color:var(--brand);
   font-size:15px; font-weight:500; cursor:pointer; padding:0 22px}
@@ -223,7 +229,7 @@ dialog .close{float:right; margin-top:4px}
       <button class="handle" id="handle" aria-expanded="true" aria-controls="panel">Dane wejściowe - dotknij, aby zwinąć/rozwinąć</button>
       <div class="step">
         <h2><span class="stepnum">1</span> Wybierz punkt w mieście</h2>
-        <div class="point">📍 <span id="pointLabel">Stary Rynek, Poznań</span></div>
+        <div class="point"><span data-g="pin" style="color:var(--brand)"></span> <span id="pointLabel">Stary Rynek, Poznań</span></div>
         <p class="hint">Kliknij na mapie miejsce, w którym pijesz.</p>
       </div>
 
@@ -241,13 +247,13 @@ dialog .close{float:right; margin-top:4px}
           <label for="hours">Czas picia (godziny):</label>
           <input type="number" id="hours" value="2" min="0" max="24" step="0.5">
         </div>
-        <div class="drink"><div class="ico">🍺</div><div class="nm">Piwo<small>500 ml · 5%</small></div>
+        <div class="drink"><div class="ico" data-g="beer"></div><div class="nm">Piwo<small>500 ml · 5%</small></div>
           <div class="stepper"><button data-d="piwo" data-k="-1" aria-label="Mniej piwa">−</button><span class="val" id="v-piwo">0</span><button data-d="piwo" data-k="1" aria-label="Więcej piwa">+</button></div></div>
-        <div class="drink"><div class="ico">🥃</div><div class="nm">Wódka<small>kieliszek 50 ml · 40%</small></div>
+        <div class="drink"><div class="ico" data-g="shot"></div><div class="nm">Wódka<small>kieliszek 50 ml · 40%</small></div>
           <div class="stepper"><button data-d="wodka" data-k="-1" aria-label="Mniej wódki">−</button><span class="val" id="v-wodka">0</span><button data-d="wodka" data-k="1" aria-label="Więcej wódki">+</button></div></div>
-        <div class="drink"><div class="ico">🍷</div><div class="nm">Wino<small>lampka 200 ml · 12%</small></div>
+        <div class="drink"><div class="ico" data-g="wine"></div><div class="nm">Wino<small>lampka 200 ml · 12%</small></div>
           <div class="stepper"><button data-d="wino" data-k="-1" aria-label="Mniej wina">−</button><span class="val" id="v-wino">0</span><button data-d="wino" data-k="1" aria-label="Więcej wina">+</button></div></div>
-        <div class="drink"><div class="ico">🧃</div><div class="nm">Pryt<small>500 ml · 18% · co tylko było</small></div>
+        <div class="drink"><div class="ico" data-g="bottle"></div><div class="nm">Pryt<small>500 ml · 18% · co tylko było</small></div>
           <div class="stepper"><button data-d="pryt" data-k="-1" aria-label="Mniej prytu">−</button><span class="val" id="v-pryt">0</span><button data-d="pryt" data-k="1" aria-label="Więcej prytu">+</button></div></div>
       </div>
 
@@ -258,19 +264,19 @@ dialog .close{float:right; margin-top:4px}
 
       <div class="step">
         <h2>Warstwy mapy</h2>
-        <div class="lrow"><div class="ltile lt-red">🚓</div>
+        <div class="lrow"><div class="ltile lt-red" data-g="car"></div>
           <div class="nm">Posterunki<small>Policja i Straż Miejska. Czerwone koło: zasięg dojazdu patrolu - rośnie z promilami.</small></div>
           <label class="switch"><input type="checkbox" data-layer="police" checked><span class="tr"></span></label></div>
-        <div class="lrow"><div class="ltile lt-yellow">🎥</div>
+        <div class="lrow"><div class="ltile lt-yellow" data-g="cam"></div>
           <div class="nm">Kamery monitoringu<small>Żółte kółko: pole widzenia, promień: 80 m.</small></div>
           <label class="switch"><input type="checkbox" data-layer="cameras" checked><span class="tr"></span></label></div>
-        <div class="lrow"><div class="ltile lt-purple">🏚️</div>
+        <div class="lrow"><div class="ltile lt-purple" data-g="bed"></div>
           <div class="nm">Izby wytrzeźwień<small>Fioletowa przerywana strefa, promień: 680 m.</small></div>
           <label class="switch"><input type="checkbox" data-layer="izby" checked><span class="tr"></span></label></div>
-        <div class="lrow"><div class="ltile lt-blue">🧭</div>
-          <div class="nm">Trasa i strefa wolności<small>🍺 Twój punkt, 🏕️ cel, niebieska przerywana linia: azymut czołgania.</small></div>
+        <div class="lrow"><div class="ltile lt-blue" data-g="route"></div>
+          <div class="nm">Trasa i strefa wolności<small>Niebieska pinezka: Twój punkt, zielona z flagą: cel, przerywana linia: azymut czołgania.</small></div>
           <label class="switch"><input type="checkbox" data-layer="route" checked><span class="tr"></span></label></div>
-        <div class="lrow"><div class="ltile lt-green">🌿</div>
+        <div class="lrow"><div class="ltile lt-green" data-g="leaf"></div>
           <div class="nm">Tereny zielone<small>Kilkanaście tysięcy obiektów - liczone w analizie, nierysowane, żeby nie zabić telefonu.</small></div>
           <span style="font-size:12px; color:var(--ink-3)">w tle</span></div>
       </div>
@@ -426,13 +432,31 @@ function initMap(){
   tiles.on("load", () => { tileWarned = false; });
   map.on("click", e => setPoint([e.latlng.lat, e.latlng.lng], "Wybrany punkt (" + e.latlng.lat.toFixed(4) + ", " + e.latlng.lng.toFixed(4) + ")"));
 }
-function emojiIcon(ch){ return L.divIcon({className:"", html:'<div class="pinemoji">'+ch+"</div>", iconSize:[24,24], iconAnchor:[12,12]}); }
+const GL = {
+  beer:'<path d="M6 8h9v11a1.5 1.5 0 0 1-1.5 1.5h-6A1.5 1.5 0 0 1 6 19V8Z"/><path d="M15 10h2.2A1.8 1.8 0 0 1 19 11.8v3.4a1.8 1.8 0 0 1-1.8 1.8H15"/><path d="M6 8c0-2 1.5-3.5 4.5-3.5S15 6 15 8"/>',
+  shot:'<path d="M8 4h8l-1.2 15a1.5 1.5 0 0 1-1.5 1.4h-2.6a1.5 1.5 0 0 1-1.5-1.4L8 4Z"/><path d="M8.6 11h6.8"/>',
+  wine:'<path d="M7 4h10c0 5-2 7.5-5 7.5S7 9 7 4Z"/><path d="M12 11.5V19M8.5 20.5h7"/>',
+  bottle:'<path d="M10 3h4v4l1.6 2.4c.3.4.4.8.4 1.3V19a1.5 1.5 0 0 1-1.5 1.5h-5A1.5 1.5 0 0 1 8 19v-8.3c0-.5.1-.9.4-1.3L10 7V3Z"/><path d="M8 13h8"/>',
+  pin:'<path d="M12 21s-6.5-6-6.5-10.6A6.5 6.5 0 0 1 12 4a6.5 6.5 0 0 1 6.5 6.4C18.5 15 12 21 12 21Z"/><circle cx="12" cy="10.3" r="2.3"/>',
+  car:'<path d="M4.5 13l1.4-3.9A2 2 0 0 1 7.8 7.8h8.4a2 2 0 0 1 1.9 1.3L19.5 13"/><path d="M4 13h16v4.3h-2.3M4 13v4.3h2.3"/><circle cx="8" cy="17.3" r="1.6"/><circle cx="16" cy="17.3" r="1.6"/>',
+  cam:'<rect x="3.5" y="7" width="12" height="9" rx="2"/><path d="M15.5 10.5 20 8.5v7l-4.5-2"/>',
+  bed:'<path d="M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="6.8" cy="10.8" r="1.6"/>',
+  route:'<circle cx="12" cy="12" r="8.3"/><path d="M15.5 8.5 13 13l-4.5 2.5L11 11z"/>',
+  leaf:'<path d="M5 19C5 10 11 5 20 5c0 9-5 15-14 15"/><path d="M5 19c3-5 7-8 11-10"/>',
+  flag:'<path d="M6 21V4"/><path d="M6 5h11l-2.5 3.5L17 12H6"/>',
+  dot:'<circle cx="12" cy="12" r="3.2"/>'
+};
+function gsvg(name){ return '<svg class="gi" viewBox="0 0 24 24" aria-hidden="true">' + GL[name] + "</svg>"; }
+function svgPin(color, name){
+  return L.divIcon({className:"", html:'<div class="mpin" style="--mc:' + color + '">' + gsvg(name) + "</div>",
+    iconSize:[30,30], iconAnchor:[15,15]});
+}
 function setPoint(pos, label){
   state.point = pos;
   document.getElementById("pointLabel").textContent = label;
   if (!map) return;
   if (userMarker) userMarker.setLatLng(pos);
-  else userMarker = L.marker(pos, {icon: emojiIcon("🍺"), title:"Twój punkt"}).addTo(map);
+  else userMarker = L.marker(pos, {icon: svgPin("#1a73e8","dot"), title:"Twój punkt"}).addTo(map);
 }
 
 /* ===================== Pobieranie danych ===================== */
@@ -618,9 +642,9 @@ async function loadLive(token){
 }
 function drawBase(){
   clearGroups(LG); clearGroups(ZG);
-  for (const p of state.data.police) L.marker(p.pos, {icon: emojiIcon("🚓"), title:p.name}).bindPopup("👮 " + p.name).addTo(LG.police);
+  for (const p of state.data.police) L.marker(p.pos, {icon: svgPin("#d93025","car"), title:p.name}).bindPopup(p.name).addTo(LG.police);
   for (const cm of state.data.cameras) L.circleMarker(cm.pos, {radius:5.5, color:"#b06000", fillColor:"#f9ab00", fillOpacity:.95, weight:1.5}).addTo(LG.cameras);
-  for (const iz of state.data.izby) L.marker(iz.pos, {icon: emojiIcon("🏚️"), title:iz.name}).bindPopup("🛏️ <b>" + iz.name + "</b><br>" + iz.addr).addTo(LG.izby);
+  for (const iz of state.data.izby) L.marker(iz.pos, {icon: svgPin("#8430ce","bed"), title:iz.name}).bindPopup("<b>" + iz.name + "</b><br>" + iz.addr).addTo(LG.izby);
 }
 
 /* ===================== Analiza i prezentacja ===================== */
@@ -675,7 +699,7 @@ function runAnalysis(){
     document.getElementById("rTime").textContent = fmtTime(timeMin);
     document.getElementById("rEta").textContent = mv.mode === "Czołgiem" ? "czołgania" : "marszu (kontrolowanego)";
     L.polyline([user, spot.g.pos], {color:"#4285f4", weight:4, dashArray:"8 8"}).addTo(LG.route);
-    const mk = L.marker(spot.g.pos, {icon: emojiIcon(spot.safe ? "🏕️" : "🌿")}).addTo(LG.route);
+    const mk = L.marker(spot.g.pos, {icon: svgPin("#188038", spot.safe ? "flag" : "leaf")}).addTo(LG.route);
     if (spot.safe){
       mk.bindPopup("✅ <b>Strefa wolności: " + spot.g.name + "</b><br>Jesteś poza zasięgiem posterunków (dojazd: " + pRad + " m), kamer i izby (680 m).").openPopup();
       document.getElementById("rIcon").textContent = "🏕️";
@@ -744,6 +768,7 @@ function switchCity(city){
   loadCityData();
 }
 document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("[data-g]").forEach(el => { el.innerHTML = gsvg(el.dataset.g); });
   initMap();
   setPoint(CITIES.poznan.center, CITIES.poznan.defaultLabel);
   loadCityData();
