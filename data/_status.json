@@ -1,37 +1,42 @@
 {
- "generated_at": "2026-10-18T12:43:31.676Z",
+ "generated_at": "2026-10-18T13:01:09.820Z",
  "version": 2,
  "results": {
-  "poznan": "ok: posterunki 11, kamery 181, zieleń 512, izby 1",
-  "lublin": "ok: posterunki 15, kamery 22, zieleń 608, izby 1"
+  "poznan": "ok: posterunki 11, kamery 181, zieleń 989, izby 1",
+  "lublin": "ok: posterunki 15, kamery 22, zieleń 1084, izby 1"
  },
  "filters": {
   "poznan": {
    "cam_indoor": 0,
-   "shelter_skipped": 15,
+   "shelter_skipped": 14,
+   "shelters_in_green": 1,
+   "shrubs": 344,
    "no_geom": 0,
-   "too_small": 11712,
+   "too_small": 11580,
    "no_interior": 0
   },
   "lublin": {
    "cam_indoor": 0,
-   "shelter_skipped": 99,
+   "shelter_skipped": 97,
+   "shelters_in_green": 2,
+   "shrubs": 75,
    "no_geom": 0,
-   "too_small": 6543,
+   "too_small": 6144,
    "no_interior": 0
   }
  },
  "mirror_errors": [
   "overpass.private.coffee (próba 1): HTTP 500",
   "overpass.private.coffee (próba 2): HTTP 500",
-  "maps.mail.ru (próba 1): HTTP 504",
+  "overpass.private.coffee (próba 1): HTTP 500",
+  "overpass.private.coffee (próba 2): HTTP 500",
   "overpass.private.coffee (próba 1): HTTP 500",
   "overpass.private.coffee (próba 2): HTTP 500",
   "maps.mail.ru (próba 1): HTTP 504",
   "maps.mail.ru (próba 2): HTTP 504",
   "overpass.private.coffee (próba 1): HTTP 500",
   "overpass.private.coffee (próba 2): HTTP 500",
-  "overpass.private.coffee (próba 1): HTTP 500",
-  "overpass.private.coffee (próba 2): HTTP 500"
+  "maps.mail.ru (próba 1): HTTP 504",
+  "maps.mail.ru (próba 2): HTTP 504"
  ]
 }
