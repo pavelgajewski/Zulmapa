@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-18T13:01:09.820Z",
+ "generated_at": "2026-10-19T10:02:46.775Z",
  "version": 2,
  "results": {
   "poznan": "ok: posterunki 11, kamery 181, zieleń 989, izby 1",
@@ -30,13 +30,13 @@
   "overpass.private.coffee (próba 2): HTTP 500",
   "overpass.private.coffee (próba 1): HTTP 500",
   "overpass.private.coffee (próba 2): HTTP 500",
-  "overpass.private.coffee (próba 1): HTTP 500",
-  "overpass.private.coffee (próba 2): HTTP 500",
   "maps.mail.ru (próba 1): HTTP 504",
   "maps.mail.ru (próba 2): HTTP 504",
   "overpass.private.coffee (próba 1): HTTP 500",
   "overpass.private.coffee (próba 2): HTTP 500",
   "maps.mail.ru (próba 1): HTTP 504",
-  "maps.mail.ru (próba 2): HTTP 504"
+  "overpass.private.coffee (próba 1): HTTP 500",
+  "overpass.private.coffee (próba 2): HTTP 500",
+  "maps.mail.ru (próba 1): HTTP 504"
  ]
 }
