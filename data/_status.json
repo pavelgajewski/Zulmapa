@@ -1,9 +1,9 @@
 {
- "generated_at": "2026-10-26T10:17:05.071Z",
+ "generated_at": "2026-11-02T12:38:16.345Z",
  "version": 2,
  "results": {
-  "poznan": "ok: posterunki 11, kamery 182, zieleń 982, izby 1",
-  "lublin": "ok: posterunki 15, kamery 22, zieleń 1076, izby 1"
+  "poznan": "ok: posterunki 11, kamery 165, zieleń 989, izby 1",
+  "lublin": "błąd: HTTP 502"
  },
  "filters": {
   "poznan": {
@@ -12,24 +12,19 @@
    "shelters_in_green": 1,
    "shrubs": 344,
    "no_geom": 0,
-   "too_small": 11567,
-   "no_interior": 0
-  },
-  "lublin": {
-   "cam_indoor": 0,
-   "shelter_skipped": 97,
-   "shelters_in_green": 2,
-   "shrubs": 75,
-   "no_geom": 0,
-   "too_small": 6100,
+   "too_small": 11584,
    "no_interior": 0
   }
  },
  "mirror_errors": [
   "overpass.private.coffee (próba 1): timeout 150 s",
+  "overpass.private.coffee (próba 2): HTTP 504",
+  "maps.mail.ru (próba 1): HTTP 504",
+  "overpass.private.coffee (próba 1): timeout 150 s",
   "overpass.private.coffee (próba 2): timeout 150 s",
   "maps.mail.ru (próba 1): HTTP 504",
-  "overpass.private.coffee (próba 1): HTTP 504",
-  "overpass.private.coffee (próba 1): timeout 150 s"
+  "maps.mail.ru (próba 2): HTTP 504",
+  "overpass-api.de (próba 1): HTTP 502",
+  "overpass-api.de (próba 2): HTTP 502"
  ]
 }
