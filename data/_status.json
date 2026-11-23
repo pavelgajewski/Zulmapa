@@ -1,9 +1,9 @@
 {
- "generated_at": "2026-11-16T12:55:29.418Z",
+ "generated_at": "2026-11-23T14:56:35.616Z",
  "version": 2,
  "results": {
   "poznan": "ok: posterunki 11, kamery 185, zieleń 982, izby 1",
-  "lublin": "ok: posterunki 15, kamery 22, zieleń 1077, izby 1"
+  "lublin": "ok: posterunki 15, kamery 22, zieleń 1082, izby 1"
  },
  "filters": {
   "poznan": {
@@ -21,14 +21,20 @@
    "shelters_in_green": 2,
    "shrubs": 75,
    "no_geom": 0,
-   "too_small": 6125,
+   "too_small": 6124,
    "no_interior": 0
   }
  },
  "mirror_errors": [
-  "overpass.private.coffee (próba 1): HTTP 504",
-  "overpass.private.coffee (próba 2): timeout 150 s",
   "overpass.private.coffee (próba 1): timeout 150 s",
-  "overpass.private.coffee (próba 2): timeout 150 s"
+  "overpass.private.coffee (próba 2): timeout 150 s",
+  "maps.mail.ru (próba 1): HTTP 504",
+  "maps.mail.ru (próba 2): HTTP 504",
+  "overpass.private.coffee (próba 1): HTTP 504",
+  "overpass.private.coffee (próba 1): timeout 150 s",
+  "overpass.private.coffee (próba 2): timeout 150 s",
+  "maps.mail.ru (próba 1): HTTP 504",
+  "maps.mail.ru (próba 2): HTTP 504",
+  "overpass-api.de (próba 1): HTTP 504"
  ]
 }
